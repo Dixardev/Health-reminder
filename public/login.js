@@ -1,3 +1,5 @@
+// login.js
+
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const alertBox = document.getElementById('alert-box');
@@ -12,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            const response = await fetch(`${config.apiUrl}/auth/login`, {
+            const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
