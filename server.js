@@ -16,12 +16,9 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Connect to MongoDB using the connection string from the .env file
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => console.error(err));
 
 // Middleware to parse JSON bodies and enable CORS
 app.use(express.json());
@@ -39,7 +36,7 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-const authRoutes = require('../routes/auth');  // Adjusted the path
+const authRoutes = require('./routes/auth');  // Adjusted the path
 app.use('/api/auth', authRoutes);
 
 app.listen(port, () => {
