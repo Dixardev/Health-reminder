@@ -1,7 +1,7 @@
 {
-  "name": "softcoin-backend",
+  "name": "softcoin",
   "version": "1.0.0",
-  "description": "Cryptocurrency mining application",
+  "description": "cryptocurrency mining application",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,8 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "cors": "^2.8.5",
+    "express": "^4.18.1",
     "dotenv": "^16.0.0",
+    "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.1"
   }
