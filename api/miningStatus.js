@@ -2,8 +2,7 @@
 
 const mongoose = require('mongoose');
 const User = require('../models/User');
-
-const connectToDatabase = require('../utils/db'); // A utility function to connect to your database
+const connectToDatabase = require('../utils/db'); // Adjusted path
 
 module.exports = async (req, res) => {
     try {
