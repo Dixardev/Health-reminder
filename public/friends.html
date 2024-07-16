@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friends</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', Arial, sans-serif; /* Using Google Font Poppins */
+            margin: 0;
+            align-items: center;
+            text-align: center;
+            padding-top: 0;
+            background-color: #fff; 
+            padding: 20px;
+        }
+          body.dark-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        h1 {
+            font-size: 2em; /* Larger title */
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+        p {
+            font-size: 0.8em; /* Normal size paragraph */
+            padding-top: 0;
+            margin-top: 0;
+            margin-bottom: 5px;
+            color: #888; /* Faded text color */
+        }
+        .earnings {
+            font-size: 2em; /* Larger earnings text */
+            color: #333; /* Darker text color */
+            margin: 0; /* Margin around the earnings text */
+        }
+        body.dark-mode .earnings {
+            color: white; /* Dark theme color */
+        }
+
+        .button {
+            display: block; /* Block-level button */
+            background-color: blue;
+            color: #fff;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+            position: fixed;
+            bottom: 100px; /* Adjust to your desired position */
+            left: calc(50% - 70px); /* Center horizontally */
+            z-index: 999; /* Ensure button stays above other content */
+        } 
+         #earning-text {
+           margin-top: 30px;
+           margin-bottom: 0;
+           padding-bottom: 0;
+         }
+         h2 {
+           top: 0;
+           bottom: 0;
+         }
+    </style>
+</head>
+<body>
+
+        <h1>Friends</h1>
+        
+        <p>Earn 20% for your direct referrals, 10% for their referrals, then 5%, 2.5%, and 1.25% for your fifth-level referrals. Plus earn 15,000 SFT for each invite, while your friend receives 30,000!</p>
+        
+        <p id="earning-text">You've earned</p>
+        <h2 class="earnings">0 SFT</h2>
+        <p>from your friends</p>
+
+        <div class="friends-list">
+            <!-- Placeholder for the list of friends and the amount they have earned -->
+        </div>
+
+        <a href="#" class="button">Invite a Friend</a>
+
+    <!-- Placeholder for navigation bar -->
+    <div id="nav-placeholder"></div>
+    <script src="navigation.js"></script>
+    <script src="dark-mode.js"></script>
+    
+</body>
+</html>

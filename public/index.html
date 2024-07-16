@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOFTCOIN</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="top-bar">
+        <div id="user-info">
+            <img src="iconns/avatar.png" alt="Avatar" id="avatar">
+            <span id="user-name">User Name</span>
+        </div>
+        <div id="controls">
+            <button id="upgrade-btn"><i class="fas fa-arrow-up"></i> Upgrades</button>
+            <label class="switch">
+                <input type="checkbox" id="dark-mode-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+    <strong><p id="coin-balance">0 SFT</p></strong>
+    <p id="status-message"></p>
+    <div id="sound-wave-container">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+    </div>
+    <p id="timer-text">Mining stops in: <span id="timer">00:00:00</span></p>
+    <button id="mine-btn">Start Mining</button>
+    
+    <div id="nav-placeholder"></div>
+    <script src="navigation.js"></script>
+    <script src="dark-mode.js"></script>
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Check if username is stored in localStorage
+            const username = localStorage.getItem('username');
+
+            // If username is not found, redirect to register.html
+            if (!username) {
+                window.location.href = 'register.html';
+            } else {
+                // Display the username in the element with id="user-name"
+                document.getElementById('user-name').textContent = username;
+            }
+
+            // Add any additional scripts here (if needed)
+        });
+    </script>
+</body>
+</html>

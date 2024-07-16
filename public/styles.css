@@ -1,0 +1,316 @@
+/* General page styles */
+body {
+    margin: 0;
+    font-family: 'poppins', sans-serif;
+    background-color: #f4f4f4;
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
+    justify-content: flex-start;
+}
+
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+#top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 20px;
+    width: 100%;
+    
+    box-sizing: border-box;
+}
+
+#user-info {
+    display: flex;
+    align-items: center;
+}
+
+#avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+#user-name {
+    font-size: 15px;
+}
+
+#controls {
+    display: flex;
+    align-items: center;
+}
+
+#upgrade-btn {
+    padding: 10px 20px;
+    font-size: 15px;
+    margin-right: 10px;
+    background-color: blue;
+    color: white;
+    border: none;
+    border-radius: 10px; /* Curved corners */
+    display: flex;
+    align-items: center;
+}
+
+#upgrade-btn i {
+    margin-right: 10px; /* Space between icon and text */
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 20px; /* Smaller width */
+    height: 20px; /* Smaller height */
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 50%; /* Make the slider a circle */
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px; /* Smaller inner circle */
+    width: 14px; /* Smaller inner circle */
+    left: 3px; /* Centered in the smaller slider */
+    bottom: 3px; /* Centered in the smaller slider */
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: blue;
+}
+
+input:checked + .slider:before {
+    transform: translateX(6px); /* Adjust the translate distance */
+}
+
+#coin-balance {
+    font-size: 30px;
+    margin: 20px 0 10px 0;
+    color: black; /* Light theme color */
+}
+
+body.dark-mode #coin-balance {
+    color: white; /* Dark theme color */
+}
+
+#status-message {
+    font-size: 15px;
+    margin-bottom: 20px;
+    margin-top: 0;
+}
+
+#sound-wave-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    height: 50px;
+    margin-bottom: 20px;
+    width: 70%;
+    padding: 3.3em;
+    padding-top: 10em;
+    padding-bottom: 1em;
+}
+
+.bar {
+    width: 10%;
+    height: 50px;
+    background-color: #000;
+    margin: 0 5px;
+    animation: soundWave 2s infinite;
+    transform-origin: bottom;
+}
+
+.bar:nth-child(1) { background-color: #e74c3c; animation-delay: 0s; }
+.bar:nth-child(2) { background-color: #e67e22; animation-delay: 0.2s; }
+.bar:nth-child(3) { background-color: #f1c40f; animation-delay: 0.4s; }
+.bar:nth-child(4) { background-color: #2ecc71; animation-delay: 0.6s; }
+.bar:nth-child(5) { background-color: #1abc9c; animation-delay: 0.8s; }
+.bar:nth-child(6) { background-color: #3498db; animation-delay: 1s; }
+.bar:nth-child(7) { background-color: #9b59b6; animation-delay: 1.2s; }
+.bar:nth-child(8) { background-color: #34495e; animation-delay: 1.4s; }
+.bar:nth-child(9) { background-color: #16a085; animation-delay: 1.6s; }
+.bar:nth-child(10) { background-color: #27ae60; animation-delay: 1.8s; }
+
+@keyframes soundWave {
+    0% { transform: scaleY(1); }
+    25% { transform: scaleY(3); }
+    50% { transform: scaleY(1.5); }
+    75% { transform: scaleY(2.5); }
+    100% { transform: scaleY(1); }
+}
+
+#mine-btn {
+    padding: 15px 30px;
+    font-size: 20px;
+    background-color: blue;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 60px; /* Adjust this value if needed */
+    position: relative;
+    overflow: hidden;
+}
+
+#mine-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#mine-btn.loading::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.1);
+    animation: loadingBar 7200s linear forwards; /* 2 hours (7200 seconds) */
+}
+
+@keyframes loadingBar {
+    from {
+        width: 0%;
+    }
+    to {
+        width: 100%;
+    }
+}
+
+body.dark-mode .bar:nth-child(1) { background-color: #e74c3c; animation-delay: 0s; }
+.bar
+(2) { background-color: #e67e22; animation-delay: 0.2s; }
+.bar
+(3) { background-color: #f1c40f; animation-delay: 0.4s; }
+.bar
+(4) { background-color: #2ecc71; animation-delay: 0.6s; }
+.bar
+(5) { background-color: #1abc9c; animation-delay: 0.8s; }
+.bar
+(6) { background-color: #3498db; animation-delay: 1s; }
+.bar
+(7) { background-color: #9b59b6; animation-delay: 1.2s; }
+.bar
+(8) { background-color: #34495e; animation-delay: 1.4s; }
+.bar
+(9) { background-color: #16a085; animation-delay: 1.6s; }
+.bar
+(10) { background-color: #27ae60; animation-delay: 1.8s; }
+
+#timer {
+  padding-bottom: 0;
+  color: blue;
+  font-size: 15px;
+}
+
+p {
+  font-size: 15px;
+}
+/* Add styles for the bottom navigation menu */
+#bottom-nav {
+  position: fixed;
+bottom: 0;
+left: 0;
+width: 100%;
+padding: px;
+display: flex;
+justify-content: space-around;
+background-color: #fff;
+border-top: 1px solid #ccc;
+box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+z-index: 1000;
+}
+
+#bottom-nav .nav-item {
+flex: 1;
+text-align: center;
+padding: 10px 0;
+padding-bottom: 30px;
+color: lightgray;
+text-decoration: none;
+transition: background-color 0.3s, color 0.3s;
+}
+
+#bottom-nav .nav-item img {
+display: block;
+margin: 0 auto 5px;
+width: 24px;
+height: 24px;
+filter: brightness(0) invert(0.8); /* This makes the icon light gray /
+fill: lightgray; / Ensure fill property is set to light gray */
+}
+
+#bottom-nav .nav-item span {
+display: block;
+font-size: 10px;
+color: lightgray;
+}
+
+#bottom-nav .nav-item
+{
+background-color: #f4f4f4;
+}
+
+#bottom-nav .nav-item.active img {
+filter: none; /* This resets the filter to show the original icon color /
+fill: blue; / Change fill color to blue for active icon */
+}
+
+#bottom-nav .nav-item.active span {
+color: blue;
+}
+
+body.dark-mode #bottom-nav {
+background-color: #121212;
+border-top: 1px solid #444;
+}
+
+body.dark-mode #bottom-nav .nav-item {
+color: lightgray;
+}
+
+body.dark-mode #bottom-nav .nav-item img {
+filter: brightness(0) invert(0.8); /* This makes the icon light gray /
+fill: lightgray; / Ensure fill property is set to light gray */
+}
+
+body.dark-mode #bottom-nav .nav-item
+{
+background-color: #333;
+}
+
+body.dark-mode #bottom-nav .nav-item.active img {
+filter: none; /* This resets the filter to show the original icon color /
+fill: blue; / Change fill color to blue for active icon */
+}
+
+body.dark-mode #bottom-nav .nav-item.active span {
+color: #0000ff;
+}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .dark-mode {
+            background-color: #121212;
+            color: #f0f0f0;
+        }
+        header {
+            text-align: center;
+            padding: 1em 0;
+        }
+        form {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 2em;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        input, button {
+            width: 100%;
+            padding: 0.8em;
+            margin: 0.5em 0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .custom-alert {
+            display: none;
+            padding: 1em;
+            margin-bottom: 1em;
+            border: 1px solid transparent;
+            border-radius: 3px;
+        }
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .toggle-container {
+            text-align: center;
+            margin: 1em 0;
+        }
+    </style>
+</head>
+<body>
+      <header>
+        <p>Welcome to Softcoin</p>
+        <h1>Log In</h1>
+    </header>
+        <form id="login-form">
+          <div id="alert-box" class="custom-alert"></div>
+                <label for="username-email">Username</label>
+                <input type="text" id="username-email" name="usernameEmail" required>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            <button type="submit">Login</button>
+            <a href="register.html" class="link">Don't have an account? Register here</a>
+        </form>
+    <script src="login.js"></script>
+</body>
+</html>
