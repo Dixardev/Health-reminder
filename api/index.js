@@ -8,6 +8,10 @@ const User = require('../models/User');  // Adjusted the path
 // Load environment variables from .env file
 dotenv.config();
 
+console.log('MONGO_URI:', process.env.MONGO_URI);
+console.log('JWT_SECRET:', process.env.JWT_SECRET);
+
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -21,7 +25,10 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // Middleware to parse JSON bodies and enable CORS
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:3000', 'https://www.softcoin.world'],
+    credentials: true
+}));
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '..', 'public')));  // Adjusted the path
