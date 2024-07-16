@@ -64,30 +64,34 @@ router.post('/register', async (req, res) => {
 
 // User login endpoint
 router.post('/login', async (req, res) => {
+    console.log('Login attempt:', req.body);
+
     const { usernameEmail, password } = req.body;
 
     try {
         const user = await User.findOne({ $or: [{ username: usernameEmail }, { email: usernameEmail }] });
 
         if (!user) {
+            console.log('User not found');
             return res.status(400).json({ message: 'User not found' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
+            console.log('Invalid password');
             return res.status(400).json({ message: 'Invalid password' });
         }
 
         // Generate JWT token
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
+        console.log('Login successful');
         res.status(200).json({ message: 'Login successful', token, username: user.username });
     } catch (error) {
         console.error('Error during login:', error);
         res.status(500).json({ message: 'Error logging in user' });
     }
 });
-
 
 module.exports = router;
