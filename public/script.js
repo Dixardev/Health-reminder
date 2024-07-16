@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
             updateCoinBalance();
             if (coinsMined >= totalCoins) {
                 clearInterval(miningInterval);
-                updateStatusMessage("Mining complete! SFT added to balance.");
+                updateStatusMessage("Mining complete!");
                 toggleBarsAnimation(false); // Deactivate bars animation
                 document.getElementById('mine-btn').disabled = false; // Enable the button after mining
                 startTimer(); // Start the next mining cycle
@@ -74,13 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initial setup
     updateCoinBalance();
-    updateStatusMessage("Game not started");
-
-    // Dark mode toggle
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
-    darkModeToggle.addEventListener('change', function() {
-        document.body.classList.toggle('dark-mode', this.checked);
-    });
+    updateStatusMessage("Mining not started");
 
     // Bars animation control
     const bars = document.querySelectorAll('.bar');

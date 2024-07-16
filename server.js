@@ -9,16 +9,22 @@ const User = require('./models/User');  // Import the User model
 dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000; // Use the PORT environment variable if set, otherwise default to 3000
 
 // Connect to MongoDB using the connection string from the .env file
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.error('MongoDB connection error:', err));
 
 // Middleware to parse JSON bodies and enable CORS
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: 'https://softcoin.world', // Allow requests from your Vercel domain
+    credentials: true
+}));
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
