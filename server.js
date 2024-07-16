@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
 const cors = require('cors');
-const User = require('../models/User');  // Adjusted the path
+const User = require('./models/User');  // Adjusted the path
 
 // Load environment variables from .env file
 dotenv.config();
