@@ -10,7 +10,6 @@ const userSchema = new mongoose.Schema({
     miningStartTime: { type: Date, default: null },
     referralUsername: { type: String, default: '' }
 });
-
 const User = mongoose.model('User', userSchema);
 
-module.exports = User;
+module.exports = User

@@ -5,6 +5,7 @@ const path = require('path');
 const cors = require('cors');
 const User = require('./models/User');  // Adjusted the path
 
+
 // Load environment variables from .env file
 dotenv.config();
 
@@ -39,6 +40,13 @@ app.get('/favicon.ico', (req, res) => {
 
 // Routes
 const authRoutes = require('./routes/auth');  // Adjusted the path
+const startMining = require('./api/startMining');
+const miningStatus = require('./api/miningStatus');
+// Route to start mining
+app.post('/api/startMining', startMining);
+
+app.post('/api/miningStatus', miningStatus);
+
 app.use('/api/auth', authRoutes);
 
 app.listen(port, () => {

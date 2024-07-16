@@ -1,52 +1,69 @@
 document.addEventListener("DOMContentLoaded", () => {
     let coinBalance = 0;
-    let coinsMined = 0;
-    const totalCoins = 15000;
     const rewardInterval = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
-    const incrementInterval = rewardInterval / totalCoins; // Time interval to increment 1 coin
     let timerInterval;
-    let miningInterval;
 
-    // Function to mine coins gradually
-    function startMining() {
-        coinsMined = 0;
-        updateStatusMessage("Mining in progress...");
-        toggleBarsAnimation(true); // Activate bars animation
-        miningInterval = setInterval(() => {
-            coinsMined++;
-            coinBalance++;
-            updateCoinBalance();
-            if (coinsMined >= totalCoins) {
-                clearInterval(miningInterval);
-                updateStatusMessage("Mining complete!");
-                toggleBarsAnimation(false); // Deactivate bars animation
-                document.getElementById('mine-btn').disabled = false; // Enable the button after mining
-                startTimer(); // Start the next mining cycle
+    async function startGame() {
+        const username = localStorage.getItem('username');
+        const response = await fetch('/api/startMining', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            updateStatusMessage(data.message);
+            document.getElementById('mine-btn').disabled = true; // Disable the button after starting
+            if (data.miningStartTime) {
+                const miningStartTime = new Date(data.miningStartTime);
+                console.log(`Mining started at: ${miningStartTime}`);
+                startTimer(miningStartTime);
             }
-        }, incrementInterval);
+            toggleBarsAnimation(true); // Activate bars animation
+            checkMiningStatus();
+        } else {
+            const error = await response.json();
+            updateStatusMessage(error.message);
+        }
     }
 
-    // Function to update coin balance on the UI
-    function updateCoinBalance() {
-        document.getElementById('coin-balance').textContent = `${coinBalance} SFT`;
+    async function checkMiningStatus() {
+        const username = localStorage.getItem('username');
+        const response = await fetch('/api/miningStatus', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            coinBalance = data.coinBalance;
+            updateCoinBalance();
+            updateStatusMessage(data.message);
+
+            if (data.message === 'Mining complete') {
+                document.getElementById('mine-btn').disabled = false; // Enable the button after mining
+                clearInterval(timerInterval);
+                toggleBarsAnimation(false); // Deactivate bars animation
+            } else {
+                document.getElementById('mine-btn').disabled = true;
+                if (data.miningStartTime) {
+                    const miningStartTime = new Date(data.miningStartTime);
+                    console.log(`Resumed mining started at: ${miningStartTime}`);
+                    startTimer(miningStartTime);
+                }
+                toggleBarsAnimation(true); // Ensure bars animation is active
+                setTimeout(checkMiningStatus, 1000); // Check status every second
+            }
+        } else {
+            const error = await response.json();
+            updateStatusMessage(error.message);
+        }
     }
 
-    // Function to update status message on the UI
-    function updateStatusMessage(message) {
-        document.getElementById('status-message').textContent = message;
-    }
-
-    // Function to start the game
-    function startGame() {
-        updateStatusMessage("Mining started");
-        document.getElementById('mine-btn').disabled = true; // Disable the button after starting
-        startMining();
-        startTimer();
-    }
-
-    // Function to start the timer for the next reward
-    function startTimer() {
-        const endTime = Date.now() + rewardInterval;
+    function startTimer(startTime) {
+        const endTime = startTime.getTime() + rewardInterval;
         const timerElement = document.getElementById('timer');
 
         function updateTimer() {
@@ -54,12 +71,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (remainingTime <= 0) {
                 clearInterval(timerInterval);
                 timerElement.textContent = "00:00:00";
-                startMining(); // Restart mining after the timer ends
+                updateStatusMessage("Mining complete!");
+                document.getElementById('mine-btn').disabled = false;
+                toggleBarsAnimation(false); // Deactivate bars animation
             } else {
                 const hours = Math.floor((remainingTime / (1000 * 60 * 60)) % 24);
                 const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
                 const seconds = Math.floor((remainingTime / 1000) % 60);
                 timerElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                console.log(`Timer update: ${timerElement.textContent}`);
             }
         }
 
@@ -67,14 +87,13 @@ document.addEventListener("DOMContentLoaded", () => {
         timerInterval = setInterval(updateTimer, 1000);
     }
 
-    // Event listener for mining button
-    document.getElementById('mine-btn').addEventListener('click', function() {
-        startGame();
-    });
+    function updateCoinBalance() {
+        document.getElementById('coin-balance').textContent = `${coinBalance} SFT`;
+    }
 
-    // Initial setup
-    updateCoinBalance();
-    updateStatusMessage("Mining not started");
+    function updateStatusMessage(message) {
+        document.getElementById('status-message').textContent = message;
+    }
 
     // Bars animation control
     const bars = document.querySelectorAll('.bar');
@@ -82,13 +101,17 @@ document.addEventListener("DOMContentLoaded", () => {
         bar.style.animationPlayState = 'paused'; // Initially paused
     });
 
-    // Function to activate/deactivate bars animation
     function toggleBarsAnimation(active) {
         bars.forEach(bar => {
             bar.style.animationPlayState = active ? 'running' : 'paused';
         });
     }
 
-    // Disable bars animation initially
-    toggleBarsAnimation(false);
+    // Event listener for mining button
+    document.getElementById('mine-btn').addEventListener('click', startGame);
+
+    // Initial setup
+    checkMiningStatus();
+    updateCoinBalance();
+    updateStatusMessage("Mining not started");
 });

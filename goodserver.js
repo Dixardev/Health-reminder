@@ -3,36 +3,46 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
 const cors = require('cors');
-const User = require('./models/User');  // Import the User model
+const User = require('./models/User');  // Adjusted the path
 
 // Load environment variables from .env file
 dotenv.config();
 
+
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Connect to MongoDB using the connection string from the .env file
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB connected'))
-    .catch(err => console.error('MongoDB connection error:', err));
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error(err));
 
 // Middleware to parse JSON bodies and enable CORS
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:3000', 'https://www.softcoin.world'],
+    credentials: true
+}));
 
-// Serve static files from the public directory
+// Middleware to serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve index.html as the default page
+// Route to serve the main index.html file
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Favicon route (if you have a favicon.ico in the public directory)
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
 });
 
 // Routes
-const authRoutes = require('./routes/auth');
-
+const authRoutes = require('./routes/auth');  // Adjusted the path
 app.use('/api/auth', authRoutes);
 
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });
+
+module.exports = app;  // Export the app for serverless function compatibility
