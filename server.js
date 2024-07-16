@@ -30,10 +30,8 @@ app.get('/', (req, res) => {
 
 // Routes
 const authRoutes = require('./routes/auth');
-const miningRoutes = require('./routes/mining');  // Import mining routes
 
 app.use('/api/auth', authRoutes);
-app.use('/api', miningRoutes);  // Use mining routes
 
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
