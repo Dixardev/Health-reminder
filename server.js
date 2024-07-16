@@ -27,12 +27,17 @@ app.use(cors({
     credentials: true
 }));
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, '..', 'public')));  // Adjusted the path
+// Middleware to serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve index.html as the default page
+// Route to serve the main index.html file
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));  // Adjusted the path
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Favicon route (if you have a favicon.ico in the public directory)
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
 });
 
 // Routes
