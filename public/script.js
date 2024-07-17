@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalCoins = 15000;
     const rewardInterval = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
     let timerInterval;
-    let miningInterval;
 
     // Function to start mining
     async function startMining() {
@@ -23,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
             toggleBarsAnimation(true); // Activate bars animation
             updateStatusMessage("Mining in progress...");
             coinBalance = data.coinBalance;
-            document.getElementById('coin-balance').textContent = `${coinBalance} SFT`;
+            updateCoinBalance();
         }
     }
 
@@ -59,8 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Calculate and update the coin balance
                 const elapsedTime = rewardInterval - remainingTime;
                 const coinsMined = Math.floor((elapsedTime / rewardInterval) * totalCoins);
-                coinBalance += coinsMined - coinBalance; // Update only the mined coins
-                updateCoinBalance();
+                document.getElementById('coin-balance').textContent = `${coinBalance + coinsMined} SFT`;
             }
         }
 
@@ -86,14 +84,18 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('coin-balance').textContent = `${coinBalance} SFT`;
             document.getElementById('mine-btn').disabled = true; // Disable the button if mining is ongoing
             toggleBarsAnimation(true); // Activate bars animation if mining is ongoing
+            updateStatusMessage("Mining in progress...");
+        } else if (data.miningComplete) {
+            coinBalance = data.coinBalance;
+            document.getElementById('coin-balance').textContent = `${coinBalance} SFT`;
+            updateStatusMessage("Mining complete!");
+            document.getElementById('mine-btn').disabled = false; // Enable the button after mining
+            toggleBarsAnimation(false); // Deactivate bars animation
         } else {
             updateStatusMessage("Mining not started");
             document.getElementById('mine-btn').disabled = false; // Enable the button if mining is not ongoing
             toggleBarsAnimation(false); // Deactivate bars animation if mining is not ongoing
         }
-
-        const statusMessage = document.getElementById('status-message');
-        statusMessage.textContent = data.message;
     }
 
     // Event listener for mining button

@@ -8,7 +8,9 @@ const userSchema = new mongoose.Schema({
     coinBalance: { type: Number, default: 0 },
     isMining: { type: Boolean, default: false },
     miningStartTime: { type: Date, default: null },
-    referralUsername: { type: String, default: '' }
+    referralUsername: { type: String, default: '' },
+    referrals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
 });
 
 const User = mongoose.model('User', userSchema);

@@ -1,34 +1,38 @@
 // api/startMining.js
-
-const mongoose = require('mongoose');
+const connectToDatabase = require('../utils/db');
 const User = require('../models/User');
-const connectToDatabase = require('../utils/db'); // Adjusted path
 
-module.exports = async (req, res) => {
-    try {
-        await connectToDatabase();
-
+module.exports = async function handler(req, res) {
+    if (req.method === 'POST') {
         const { username } = req.body;
-        if (!username) {
-            return res.status(400).json({ message: 'Username is required' });
+
+        try {
+            await connectToDatabase();
+
+            const user = await User.findOne({ username });
+
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            // Check if the user is currently mining
+            if (user.isMining) {
+                return res.status(400).json({ message: 'Mining already in progress' });
+            }
+
+            user.isMining = true;
+            user.miningStartTime = new Date();
+            await user.save();
+
+            return res.status(200).json({
+                message: 'Mining started',
+                miningStartTime: user.miningStartTime,
+                coinBalance: user.coinBalance
+            });
+        } catch (error) {
+            return res.status(500).json({ message: 'Error starting mining', error });
         }
-
-        const user = await User.findOne({ username });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        if (user.isMining) {
-            return res.status(400).json({ message: 'Mining already in progress' });
-        }
-
-        user.isMining = true;
-        user.miningStartTime = new Date();
-        await user.save();
-
-        res.status(200).json({ message: 'Mining started', miningStartTime: user.miningStartTime.toISOString() });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+    } else {
+        res.status(405).json({ message: 'Method not allowed' });
     }
 };

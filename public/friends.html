@@ -72,10 +72,10 @@
         <p>Earn 20% for your direct referrals, 10% for their referrals, then 5%, 2.5%, and 1.25% for your fifth-level referrals. Plus earn 15,000 SFT for each invite, while your friend receives 30,000!</p>
         
         <p id="earning-text">You've earned</p>
-        <h2 class="earnings">0 SFT</h2>
+        <h2 class="earnings" id="total-earned">0 SFT</h2>
         <p>from your friends</p>
 
-        <div class="friends-list">
+        <div class="friends-list" id="referrals"></div>
             <!-- Placeholder for the list of friends and the amount they have earned -->
         </div>
 
@@ -85,6 +85,38 @@
     <div id="nav-placeholder"></div>
     <script src="navigation.js"></script>
     <script src="dark-mode.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const username = localStorage.getItem('username');
+            if (!username) {
+                window.location.href = 'register.html';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/auth/referrals/${username}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    const referralsDiv = document.getElementById('referrals');
+                    let totalEarned = 0;
+
+                    data.referrals.forEach(referral => {
+                        totalEarned += referral.coinBalance;
+                        const referralDiv = document.createElement('div');
+                        referralDiv.textContent = `${referral.username}: ${referral.coinBalance} SFT`;
+                        referralsDiv.appendChild(referralDiv);
+                    });
+
+                    document.getElementById('total-earned').textContent = `${totalEarned} SFT`;
+                } else {
+                    console.error(data.message);
+                }
+            } catch (error) {
+                console.error('Error fetching referrals:', error);
+            }
+        });
+    </script>
     
 </body>
 </html>
