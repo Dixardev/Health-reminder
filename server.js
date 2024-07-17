@@ -34,44 +34,18 @@ app.use(cors());
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Middleware to verify JWT token and check session in Redis
-const verifyToken = async (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ message: 'Access denied. No token provided.' });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
-        if (err) {
-            return res.status(401).json({ message: 'Invalid token.' });
-        }
-
-        try {
-            const userData = await redisClient.get(`auth_${token}`);
-
-            if (!userData) {
-                return res.status(401).json({ message: 'Session expired. Please log in again.' });
-            }
-
-            req.user = JSON.parse(userData);
-            next();
-        } catch (error) {
-            console.error('Redis error:', error);
-            res.status(500).json({ message: 'Internal server error.' });
-        }
-    });
-};
-
 // Routes
-app.post('/api/startMining', verifyToken, startMining);
-app.post('/api/miningStatus', verifyToken, miningStatus);
+app.post('/api/startMining', startMining);
+app.post('/api/miningStatus', miningStatus);
 app.use('/api/auth', authRoutes);
-app.use('/api', verifyToken, referralRoutes);
+app.use('/api', referralRoutes);
 
 // Serve HTML files
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 const htmlFiles = [
-  'index',
   'friends',
   'tasks',
   'market',
@@ -86,15 +60,6 @@ htmlFiles.forEach(file => {
   app.get(`/${file}`, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', `${file}.html`));
   });
-});
-
-// Serve static files
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/favicon.ico', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
 });
 
 // Error handler middleware
