@@ -11,6 +11,8 @@ body {
     overflow: hidden;
     transition: background-color 0.3s, color 0.3s;
     justify-content: flex-start;
+    overflow-y: auto;
+    padding-bottom: 200px;
 }
 
 body.dark-mode {
