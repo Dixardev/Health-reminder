@@ -1,9 +1,9 @@
 {
-  "name": "SoftCoin",
-  "short_name": "SoftCoin",
+  "name": "Softcoin",
+  "short_name": "Softcoin",
   "description": "Cryptocurrency Mining and Earning Platform.",
-  "start_url": "/index.html",
-  "display": "standalone",
+  "start_url": "/loading.html",
+  "display": "fullscreen",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "icons": [
@@ -17,5 +17,9 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "dir": "auto",
+  "lang": "en",
+  "orientation": "portrait",
+  "prefer_related_applications": false
 }
