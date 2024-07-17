@@ -42,12 +42,15 @@ app.get('/favicon.ico', (req, res) => {
 const authRoutes = require('./routes/auth');  // Adjusted the path
 const startMining = require('./api/startMining');
 const miningStatus = require('./api/miningStatus');
+const referralRoutes = require('./routes/referrals');
+
 // Route to start mining
 app.post('/api/startMining', startMining);
 
 app.post('/api/miningStatus', miningStatus);
 
 app.use('/api/auth', authRoutes);
+app.use('/api', referralRoutes);
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

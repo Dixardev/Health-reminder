@@ -87,5 +87,15 @@
     </form>
     <p id="registration-message"></p>
     <script src="register.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const referrer = urlParams.get('ref');
+            if (referrer) {
+                document.getElementById('referral-username').value = referrer;
+            }
+        });
+    </script>
+    <script src="dark-mode.js"></script>
 </body>
 </html>

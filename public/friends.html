@@ -8,41 +8,69 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Poppins', Arial, sans-serif; /* Using Google Font Poppins */
+            font-family: 'Poppins', Arial, sans-serif;
             margin: 0;
-            align-items: center;
-            text-align: center;
-            padding-top: 0;
-            background-color: #fff; 
             padding: 20px;
+            text-align: center;
+            background-color: #fff;
         }
-          body.dark-mode {
+
+        body.dark-mode {
             background-color: #121212;
             color: #ffffff;
         }
+
         h1 {
-            font-size: 2em; /* Larger title */
-            padding-bottom: 0;
-            margin-bottom: 0;
+            font-size: 2em;
+            margin-bottom: 10px;
         }
+
         p {
-            font-size: 0.8em; /* Normal size paragraph */
-            padding-top: 0;
-            margin-top: 0;
-            margin-bottom: 5px;
-            color: #888; /* Faded text color */
+            font-size: 1em;
+            margin-top: 5px;
+            color: #888;
         }
+
         .earnings {
-            font-size: 2em; /* Larger earnings text */
-            color: #333; /* Darker text color */
-            margin: 0; /* Margin around the earnings text */
+            font-size: 2em;
+            color: #333;
+            margin: 0;
         }
+
         body.dark-mode .earnings {
-            color: white; /* Dark theme color */
+            color: white;
+        }
+
+        .friends-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: left;
+        }
+
+        body.dark-mode .friends-container {
+            background: #1e1e1e;
+        }
+
+        .friend {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        body.dark-mode .friend {
+            border-bottom: 1px solid #333;
+        }
+
+        .friend:last-child {
+            border-bottom: none;
         }
 
         .button {
-            display: block; /* Block-level button */
+            display: block;
             background-color: blue;
             color: #fff;
             padding: 12px 24px;
@@ -50,73 +78,104 @@
             border-radius: 5px;
             margin-top: 20px;
             position: fixed;
-            bottom: 100px; /* Adjust to your desired position */
-            left: calc(50% - 70px); /* Center horizontally */
-            z-index: 999; /* Ensure button stays above other content */
-        } 
-         #earning-text {
-           margin-top: 30px;
-           margin-bottom: 0;
-           padding-bottom: 0;
-         }
-         h2 {
-           top: 0;
-           bottom: 0;
-         }
+            bottom: 100px;
+            left: calc(50% - 70px);
+            z-index: 999;
+        }
+
+        .custom-alert {
+            display: none;
+            padding: 1em;
+            margin-bottom: 1em;
+            border: 1px solid transparent;
+            border-radius: 3px;
+        }
+
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
     </style>
 </head>
 <body>
-
-        <h1>Friends</h1>
-        
-        <p>Earn 20% for your direct referrals, 10% for their referrals, then 5%, 2.5%, and 1.25% for your fifth-level referrals. Plus earn 15,000 SFT for each invite, while your friend receives 30,000!</p>
-        
-        <p id="earning-text">You've earned</p>
-        <h2 class="earnings" id="total-earned">0 SFT</h2>
-        <p>from your friends</p>
-
-        <div class="friends-list" id="referrals"></div>
-            <!-- Placeholder for the list of friends and the amount they have earned -->
+    <h1>Friends</h1>
+    <p>Earn 50,000 SFT for each friend you invite, and your friend also receives 50,000 SFT!</p>
+    <p id="earning-text">Total Earnings From Friends</p>
+    <h2 class="earnings">0 SFT</h2>
+    <div class="friends-container">
+        <h2 id="friends-count">You have 0 friends</h2>
+        <div id="friends-list">
+            <!-- Friends will be dynamically inserted here -->
         </div>
-
-        <a href="#" class="button">Invite a Friend</a>
-
-    <!-- Placeholder for navigation bar -->
+    </div>
+    <button class="button" id="invite-button">Invite a Friend</button>
+    <div id="alert-box" class="custom-alert"></div>
     <div id="nav-placeholder"></div>
     <script src="navigation.js"></script>
     <script src="dark-mode.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const username = localStorage.getItem('username');
-            if (!username) {
-                window.location.href = 'register.html';
-                return;
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            const inviteButton = document.getElementById('invite-button');
+            const alertBox = document.getElementById('alert-box');
 
-            try {
-                const response = await fetch(`/api/auth/referrals/${username}`);
-                const data = await response.json();
+            const showAlert = (message, type) => {
+                alertBox.textContent = message;
+                alertBox.className = `custom-alert alert-${type}`;
+                alertBox.style.display = 'block';
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                }, 3000);
+            };
 
-                if (response.ok) {
-                    const referralsDiv = document.getElementById('referrals');
-                    let totalEarned = 0;
+            inviteButton.addEventListener('click', () => {
+                const referralLink = 'https://www.softcoin.world/register.html?ref=' + localStorage.getItem('username');
+                navigator.clipboard.writeText(referralLink).then(() => {
+                    showAlert('Referral link copied to clipboard!', 'success');
+                }).catch(err => {
+                    showAlert('Failed to copy referral link', 'danger');
+                    console.error('Error:', err);
+                });
+            });
 
-                    data.referrals.forEach(referral => {
-                        totalEarned += referral.coinBalance;
-                        const referralDiv = document.createElement('div');
-                        referralDiv.textContent = `${referral.username}: ${referral.coinBalance} SFT`;
-                        referralsDiv.appendChild(referralDiv);
-                    });
+            const updateFriendsList = (friends) => {
+                const friendsList = document.getElementById('friends-list');
+                const friendsCount = document.getElementById('friends-count');
+                const totalEarnings = friends.reduce((acc, friend) => acc + friend.earned, 0);
 
-                    document.getElementById('total-earned').textContent = `${totalEarned} SFT`;
-                } else {
-                    console.error(data.message);
+                friendsCount.textContent = `You have ${friends.length} friends`;
+                document.querySelector('.earnings').textContent = `${totalEarnings} SFT`;
+
+                friendsList.innerHTML = '';
+                friends.forEach(friend => {
+                    const friendItem = document.createElement('div');
+                    friendItem.className = 'friend';
+                    friendItem.innerHTML = `<span>${friend.username}</span><span>${friend.earned} SFT</span>`;
+                    friendsList.appendChild(friendItem);
+                });
+            };
+
+            const fetchFriends = async () => {
+                try {
+                    const response = await fetch('/api/referrals/' + localStorage.getItem('username'));
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch friends');
+                    }
+                    const friends = await response.json();
+                    updateFriendsList(friends);
+                } catch (error) {
+                    console.error('Error fetching friends:', error);
                 }
-            } catch (error) {
-                console.error('Error fetching referrals:', error);
-            }
+            };
+
+            fetchFriends();
         });
     </script>
-    
 </body>
 </html>

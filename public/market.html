@@ -4,111 +4,131 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crypto Market</title>
-   <link rel="stylesheet" href="styles.css">
-   
+    <link rel="stylesheet" href="styles.css">
     <style>
-     body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Poppins', sans-serif;
-    background: url('images/homepagebg.png') no-repeat center center fixed; 
-    background-size: cover;
-    overflow: auto;
-    overflow-x: hidden; /* Prevent horizontal scrolling */
-}
-
-header {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    background: #fff;
-    color: #333;
-    text-align: center;
-    padding: 20px 0;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    margin-bottom: 2px;
-}
-body.dark-mode header {
-background-color: #212121;
-color: #fff;
-}
-header h1 {
-    margin: 0;
-    font-size: 2em;
-}
-
-header h2 {
-    margin: 5px 0 0;
-    font-size: 0.8em;
-    color: #ccc;
-}
-
-main {
-    padding-top: 100px; /* Adjust based on header height */
-    width: 90%;
-    margin: 0 auto;
-}
-
-.crypto-prices {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding-top: 2px;
-    margin-top: 2;
-    padding-bottom: 100px;
-}
-
-.crypto {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fff;
-    border-radius: 10px;
-    padding: 15px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    margin: 1px;
-    
-}
-body.dark-mode .crypto {
-background-color: #212121;
-color: #fff;
-}
-body.dark-mode .crypto-name {
-color: #fff;
-}
-.crypto-name {
-    display: flex;
-    align-items: center;
-    font-size: 0.9em;
-    font-weight: bold;
-    color: #333;
-}
-
-.crypto-name img {
-    width: 20px;
-    height: 20px;
-    margin-right: 5px;
-}
-
-.crypto-price {
-    background: blue;
-    padding: 5px 10px;
-    border-radius: 10px;
-    font-size: 0.9em;
-    font-weight: bold;
-    color: #fff;
-}
-
-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-body::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-}
-
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background: url('images/homepagebg.png') no-repeat center center fixed; 
+            background-size: cover;
+            overflow: auto;
+            overflow-x: hidden;
+        }
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: #fff;
+            color: #333;
+            text-align: center;
+            padding: 20px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            margin-bottom: 2px;
+        }
+        body.dark-mode header {
+            background-color: #212121;
+            color: #fff;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        header h2 {
+            margin: 5px 0 0;
+            font-size: 0.8em;
+            color: gray;
+        }
+        main {
+            padding-top: 130px;
+            width: 90%;
+            margin: 0 auto;
+        }
+        .crypto-prices {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding-top: 2px;
+            margin-top: 2;
+            padding-bottom: 100px;
+        }
+        .crypto {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin: 1px;
+        }
+        body.dark-mode .crypto {
+            background-color: #212121;
+            color: #fff;
+        }
+        body.dark-mode .crypto-name {
+            color: #fff;
+        }
+        .crypto-name {
+            display: flex;
+            align-items: center;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #333;
+        }
+        .crypto-name img {
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+        }
+        .crypto-price {
+            background: blue;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #fff;
+        }
+        body::-webkit-scrollbar {
+            width: 8px;
+        }
+        body::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgb(0,0,0); 
+            background-color: rgba(0,0,0,0.4); 
+            padding-top: 60px; 
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; 
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -119,110 +139,202 @@ body::-webkit-scrollbar-thumb {
     <main>
         <div id="crypto-prices" class="crypto-prices"></div>
     </main>
-
+    <div id="cryptoModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalCryptoName">Crypto Price Trend</h2>
+            <canvas id="priceTrendChart"></canvas>
+        </div>
+    </div>
     <div id="nav-placeholder"></div>
     <script src="navigation.js"></script>
     <script src="dark-mode.js"></script>
-   <script>
-     const apiUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,binancecoin,solana,usd-coin,xrp,toncoin,dogecoin,cardano,tron,wrapped-bitcoin,shiba-inu,avalanche-2,polkadot,chainlink,bitcoin-cash,near,uniswap,polygon,litecoin,dai,leo-token,pepe,kaspa,internet-computer,ethereum-classic,aptos,monero,hedera,render-token,cosmos,stellar,mantle,first-digital-usd,okb,fetch-ai,immutable-x,pancakeswap-token,eth-2-staking-by-pooltogether,binance-usd,usde,aave,elrond-erd-2,helium,chiliz,quant-network,celo,curve-dao-token,theta-token&vs_currencies=usd';
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const apiUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,binancecoin,solana,usd-coin,xrp,toncoin,dogecoin,cardano,tron,wrapped-bitcoin,shiba-inu,avalanche-2,polkadot,chainlink,bitcoin-cash,near,uniswap,polygon,litecoin,dai,leo-token,pepe,kaspa,internet-computer,ethereum-classic,aptos,monero,hedera,render-token,cosmos,stellar,mantle,first-digital-usd,okb,fetch-ai,immutable-x,pancakeswap-token,eth-2-staking-by-pooltogether,binance-usd,usde,aave,elrond-erd-2,helium,chiliz,quant-network,celo,curve-dao-token,theta-token&vs_currencies=usd';
 
-async function fetchCryptoPrices() {
-    try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-        displayCryptoPrices(data);
-    } catch (error) {
-        console.error('Error fetching cryptocurrency prices:', error);
-    }
-}
+            async function fetchCryptoPrices() {
+                try {
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+                    displayCryptoPrices(data);
+                } catch (error) {
+                    console.error('Error fetching cryptocurrency prices:', error);
+                }
+            }
 
-function displayCryptoPrices(prices) {
-    const cryptoPricesDiv = document.getElementById('crypto-prices');
-    cryptoPricesDiv.innerHTML = '';
+            function displayCryptoPrices(prices) {
+                const cryptoPricesDiv = document.getElementById('crypto-prices');
+                if (!cryptoPricesDiv) {
+                    console.error('Crypto prices div not found');
+                    return;
+                }
+                cryptoPricesDiv.innerHTML = '';
 
-    const cryptoData = [
-        { id: 'bitcoin', name: 'Bitcoin (BTC)', icon: 'icons/bitcoin.png' },
-        { id: 'ethereum', name: 'Ethereum (ETH)', icon: 'icons/ethereum.png' },
-        { id: 'tether', name: 'Tether (USDT)', icon: 'icons/tether.png' },
-        { id: 'binancecoin', name: 'BNB (BNB)', icon: 'icons/binancecoin.png' },
-        { id: 'solana', name: 'Solana (SOL)', icon: 'icons/solana.png' },
-        { id: 'usd-coin', name: 'USD Coin (USDC)', icon: 'icons/usd-coin.png' },
-        { id: 'xrp', name: 'XRP (XRP)', icon: 'icons/xrp.png' },
-        { id: 'toncoin', name: 'Toncoin (TONCOIN)', icon: 'icons/toncoin.png' },
-        { id: 'dogecoin', name: 'Dogecoin (DOGE)', icon: 'icons/dogecoin.png' },
-        { id: 'cardano', name: 'Cardano (ADA)', icon: 'icons/cardano.png' },
-        { id: 'tron', name: 'TRON (TRX)', icon: 'icons/tron.png' },
-        { id: 'wrapped-bitcoin', name: 'Wrapped Bitcoin (WBTC)', icon: 'icons/wrapped-bitcoin.png' },
-        { id: 'shiba-inu', name: 'Shiba Inu (SHIB)', icon: 'icons/shiba-inu.png' },
-        { id: 'avalanche-2', name: 'Avalanche (AVAX)', icon: 'icons/avalanche-2.png' },
-        { id: 'polkadot', name: 'Polkadot (DOT)', icon: 'icons/polkadot.png' },
-        { id: 'chainlink', name: 'Chainlink (LINK)', icon: 'icons/chainlink.png' },
-        { id: 'bitcoin-cash', name: 'Bitcoin Cash (BCH)', icon: 'icons/bitcoin-cash.png' },
-        { id: 'near', name: 'NEAR Protocol (NEAR)', icon: 'icons/near.png' },
-        { id: 'uniswap', name: 'Uniswap (UNI)', icon: 'icons/uniswap.png' },
-        { id: 'polygon', name: 'Polygon (MATIC)', icon: 'icons/polygon.png' },
-        { id: 'litecoin', name: 'Litecoin (LTC)', icon: 'icons/litecoin.png' },
-        { id: 'dai', name: 'Dai (DAI)', icon: 'icons/dai.png' },
-        { id: 'leo-token', name: 'UNUS SED LEO (LEO)', icon: 'icons/leo-token.png' },
-        { id: 'pepe', name: 'Pepe (PEPE)', icon: 'icons/pepe.png' },
-        { id: 'kaspa', name: 'Kaspa (KAS)', icon: 'icons/kaspa.png' },
-        { id: 'internet-computer', name: 'Internet Computer (ICP)', icon: 'icons/internet-computer.png' },
-        { id: 'ethereum-classic', name: 'Ethereum Classic (ETC)', icon: 'icons/ethereum-classic.png' },
-        { id: 'aptos', name: 'Aptos (APT)', icon: 'icons/aptos.png' },
-        { id: 'monero', name: 'Monero (XMR)', icon: 'icons/monero.png' },
-        { id: 'hedera', name: 'Hedera (HBAR)', icon: 'icons/hedera.png' },
-        { id: 'render-token', name: 'Render Token (RNDR)', icon: 'icons/render-token.png' },
-        { id: 'cosmos', name: 'Cosmos (ATOM)', icon: 'icons/cosmos.png' },
-        { id: 'stellar', name: 'Stellar (XLM)', icon: 'icons/stellar.png' },
-        { id: 'mantle', name: 'Mantle (MNT)', icon: 'icons/mantle.png' },
-        { id: 'first-digital-usd', name: 'First Digital USD (FDUSD)', icon: 'icons/first-digital-usd.png' },
-        { id: 'okb', name: 'OKB (OKB)', icon: 'icons/okb.png' },
-        { id: 'fetch-ai', name: 'Fetch.AI (FET)', icon: 'icons/fetch-ai.png' },
-        { id: 'immutable-x', name: 'Immutable X (IMX)', icon: 'icons/immutable-x.png' },
-        { id: 'pancakeswap-token', name: 'PancakeSwap (CAKE)', icon: 'icons/pancakeswap-token.png' },
-        { id: 'eth-2-staking-by-pooltogether', name: 'ETH 2.0 Staking (ETH2)', icon: 'icons/eth-2-staking-by-pooltogether.png' },
-        { id: 'binance-usd', name: 'Binance USD (BUSD)', icon: 'icons/binance-usd.png' },
-        { id: 'usde', name: 'USDE (USDE)', icon: 'icons/usde.png' },
-        { id: 'aave', name: 'Aave (AAVE)', icon: 'icons/aave.png' },
-        { id: 'elrond-erd-2', name: 'MultiversX (EGLD)', icon: 'icons/elrond-erd-2.png' },
-        { id: 'helium', name: 'Helium (HNT)', icon: 'icons/helium.png' },
-        { id: 'chiliz', name: 'Chiliz (CHZ)', icon: 'icons/chiliz.png' },
-        { id: 'quant-network', name: 'Quant (QNT)', icon: 'icons/quant-network.png' },
-        { id: 'celo', name: 'Celo (CELO)', icon: 'icons/celo.png' },
-        { id: 'curve-dao-token', name: 'Curve DAO (CRV)', icon: 'icons/curve-dao-token.png' },
-        { id: 'theta-token', name: 'Theta (THETA)', icon: 'icons/theta-token&vs_currencies=usd.png' }
-    ];
+                const cryptoData = [
+                    { id: 'bitcoin', name: 'Bitcoin (BTC)', icon: 'icons/bitcoin.png' },
+                    { id: 'ethereum', name: 'Ethereum (ETH)', icon: 'icons/ethereum.png' },
+                    { id: 'tether', name: 'Tether (USDT)', icon: 'icons/tether.png' },
+                    { id: 'binancecoin', name: 'BNB (BNB)', icon: 'icons/binancecoin.png' },
+                    { id: 'solana', name: 'Solana (SOL)', icon: 'icons/solana.png' },
+                    { id: 'usd-coin', name: 'USD Coin (USDC)', icon: 'icons/usd-coin.png' },
+                    { id: 'xrp', name: 'XRP (XRP)', icon: 'icons/xrp.png' },
+                    { id: 'toncoin', name: 'Toncoin (TONCOIN)', icon: 'icons/toncoin.png' },
+                    { id: 'dogecoin', name: 'Dogecoin (DOGE)', icon: 'icons/dogecoin.png' },
+                    { id: 'cardano', name: 'Cardano (ADA)', icon: 'icons/cardano.png' },
+                    { id: 'tron', name: 'TRON (TRX)', icon: 'icons/tron.png' },
+                    { id: 'wrapped-bitcoin', name: 'Wrapped Bitcoin (WBTC)', icon: 'icons/wrapped-bitcoin.png' },
+                    { id: 'shiba-inu', name: 'Shiba Inu (SHIB)', icon: 'icons/shiba-inu.png' },
+                    { id: 'avalanche-2', name: 'Avalanche (AVAX)', icon: 'icons/avalanche-2.png' },
+                    { id: 'polkadot', name: 'Polkadot (DOT)', icon: 'icons/polkadot.png' },
+                    { id: 'chainlink', name: 'Chainlink (LINK)', icon: 'icons/chainlink.png' },
+                    { id: 'bitcoin-cash', name: 'Bitcoin Cash (BCH)', icon: 'icons/bitcoin-cash.png' },
+                    { id: 'near', name: 'NEAR Protocol (NEAR)', icon: 'icons/near.png' },
+                    { id: 'uniswap', name: 'Uniswap (UNI)', icon: 'icons/uniswap.png' },
+                    { id: 'polygon', name: 'Polygon (MATIC)', icon: 'icons/polygon.png' },
+                    { id: 'litecoin', name: 'Litecoin (LTC)', icon: 'icons/litecoin.png' },
+                    { id: 'dai', name: 'Dai (DAI)', icon: 'icons/dai.png' },
+                    { id: 'leo-token', name: 'LEO Token (LEO)', icon: 'icons/leo-token.png' },
+                    { id: 'pepe', name: 'Pepe (PEPE)', icon: 'icons/pepe.png' },
+                    { id: 'kaspa', name: 'Kaspa (KAS)', icon: 'icons/kaspa.png' },
+                    { id: 'internet-computer', name: 'Internet Computer (ICP)', icon: 'icons/internet-computer.png' },
+                    { id: 'ethereum-classic', name: 'Ethereum Classic (ETC)', icon: 'icons/ethereum-classic.png' },
+                    { id: 'aptos', name: 'Aptos (APT)', icon: 'icons/aptos.png' },
+                    { id: 'monero', name: 'Monero (XMR)', icon: 'icons/monero.png' },
+                    { id: 'hedera', name: 'Hedera (HBAR)', icon: 'icons/hedera.png' },
+                    { id: 'render-token', name: 'Render (RNDR)', icon: 'icons/render-token.png' },
+                    { id: 'cosmos', name: 'Cosmos (ATOM)', icon: 'icons/cosmos.png' },
+                    { id: 'stellar', name: 'Stellar (XLM)', icon: 'icons/stellar.png' },
+                    { id: 'mantle', name: 'Mantle (MNT)', icon: 'icons/mantle.png' },
+                    { id: 'first-digital-usd', name: 'First Digital USD (FDUSD)', icon: 'icons/first-digital-usd.png' },
+                    { id: 'okb', name: 'OKB (OKB)', icon: 'icons/okb.png' },
+                    { id: 'fetch-ai', name: 'Fetch.ai (FET)', icon: 'icons/fetch-ai.png' },
+                    { id: 'immutable-x', name: 'ImmutableX (IMX)', icon: 'icons/immutable-x.png' },
+                    { id: 'pancakeswap-token', name: 'PancakeSwap (CAKE)', icon: 'icons/pancakeswap-token.png' },
+                    { id: 'eth-2-staking-by-pooltogether', name: 'Eth 2.0 Staking (PETH)', icon: 'icons/eth-2-staking-by-pooltogether.png' },
+                    { id: 'binance-usd', name: 'Binance USD (BUSD)', icon: 'icons/binance-usd.png' },
+                    { id: 'usde', name: 'USDE (USDE)', icon: 'icons/usde.png' },
+                    { id: 'aave', name: 'Aave (AAVE)', icon: 'icons/aave.png' },
+                    { id: 'elrond-erd-2', name: 'MultiversX (EGLD)', icon: 'icons/elrond-erd-2.png' },
+                    { id: 'helium', name: 'Helium (HNT)', icon: 'icons/helium.png' },
+                    { id: 'chiliz', name: 'Chiliz (CHZ)', icon: 'icons/chiliz.png' },
+                    { id: 'quant-network', name: 'Quant (QNT)', icon: 'icons/quant-network.png' },
+                    { id: 'celo', name: 'Celo (CELO)', icon: 'icons/celo.png' },
+                    { id: 'curve-dao-token', name: 'Curve DAO (CRV)', icon: 'icons/curve-dao-token.png' },
+                    { id: 'theta-token', name: 'Theta Network (THETA)', icon: 'icons/theta-token.png' }
+                ];
 
-    cryptoData.forEach(crypto => {
-        if (prices[crypto.id]) {
-            const price = prices[crypto.id].usd;
+                cryptoData.forEach(crypto => {
+                    const price = prices[crypto.id]?.usd;
+                    if (price !== undefined) {
+                        const cryptoElement = document.createElement('div');
+                        cryptoElement.classList.add('crypto');
+                        cryptoElement.setAttribute('data-crypto-id', crypto.id);
+                        cryptoElement.innerHTML = `
+                            <div class="crypto-name">
+                                <img src="${crypto.icon}" alt="${crypto.name} Icon">
+                                ${crypto.name}
+                            </div>
+                            <div class="crypto-price">$${price.toFixed(2)}</div>
+                        `;
+                        cryptoPricesDiv.appendChild(cryptoElement);
+                    }
+                });
 
-            const cryptoDiv = document.createElement('div');
-            cryptoDiv.className = 'crypto';
+                attachEventListeners();
+            }
 
-            const cryptoNameDiv = document.createElement('div');
-            cryptoNameDiv.className = 'crypto-name';
-            cryptoNameDiv.innerHTML = `<img src="${crypto.icon}" alt="${crypto.name}"> ${crypto.name}`;
+            function attachEventListeners() {
+                const cryptoPricesDiv = document.getElementById('crypto-prices');
+                if (!cryptoPricesDiv) {
+                    console.error('Crypto prices div not found');
+                    return;
+                }
+                cryptoPricesDiv.addEventListener('click', function(event) {
+                    const target = event.target.closest('.crypto');
+                    if (target) {
+                        const cryptoName = target.querySelector('.crypto-name').innerText;
+                        const cryptoId = target.getAttribute('data-crypto-id');
+                        openModal(cryptoName, cryptoId);
+                    }
+                });
+            }
 
-            const cryptoPriceDiv = document.createElement('div');
-            cryptoPriceDiv.className = 'crypto-price';
-            cryptoPriceDiv.textContent = `$${price.toFixed(2)}`;
+            const modal = document.getElementById('cryptoModal');
+            const span = document.getElementsByClassName('close')[0];
 
-            cryptoDiv.appendChild(cryptoNameDiv);
-            cryptoDiv.appendChild(cryptoPriceDiv);
-            cryptoPricesDiv.appendChild(cryptoDiv);
-        }
-    });
-}
+            if (span) {
+                span.onclick = function() {
+                    modal.style.display = 'none';
+                }
+            } else {
+                console.error('Close button not found');
+            }
 
-// Fetch and display the prices every 60 seconds
-fetchCryptoPrices();
-setInterval(fetchCryptoPrices, 60000);
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            }
 
+            function openModal(cryptoName, cryptoId) {
+                const modalCryptoName = document.getElementById('modalCryptoName');
+                if (modalCryptoName) {
+                    modalCryptoName.innerText = cryptoName;
+                } else {
+                    console.error('Modal crypto name element not found');
+                    return;
+                }
+                if (modal) {
+                    modal.style.display = 'block';
+                } else {
+                    console.error('Modal element not found');
+                    return;
+                }
+                fetchPriceTrend(cryptoId);
+            }
 
+            async function fetchPriceTrend(cryptoId) {
+                try {
+                    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${cryptoId}/market_chart?vs_currency=usd&days=7`);
+                    const data = await response.json();
+                    const prices = data.prices.map(item => ({ t: new Date(item[0]), y: item[1] }));
 
-   </script>
-   <script src="app.js"></script>
+                    const ctx = document.getElementById('priceTrendChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            datasets: [{
+                                label: 'Price Trend',
+                                data: prices,
+                                fill: false,
+                                borderColor: 'rgb(75, 192, 192)',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                x: {
+                                    type: 'time',
+                                    time: {
+                                        unit: 'day'
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: false
+                                }
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error fetching price trend:', error);
+                }
+            }
 
+            fetchCryptoPrices();
+            setInterval(fetchCryptoPrices, 60000);
+        });
+    </script>
 </body>
 </html>
