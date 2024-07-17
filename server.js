@@ -16,7 +16,10 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api', require('./routes/referrals'));
+const referralRoutes = require('./routes/referrals');
+app.use('/api', referralRoutes);
+
+
 
 const User = require('./models/User');
 

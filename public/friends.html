@@ -106,9 +106,10 @@
 </head>
 <body>
     <h1>Friends</h1>
-    <p>Earn 50,000 SFT for each friend you invite, and your friend also receives 50,000 SFT!</p>
-    <p id="earning-text">Total Earnings From Friends</p>
+    <p>Earn 20% for your direct referrals, 10% for their referrals, then 5%, 2.5%, and 1.25% for your fifth-level referrals. Plus earn 15,000 SFT for each invite, while your friend receives 30,000!</p>
+    <p id="earning-text">You've earned</p>
     <h2 class="earnings">0 SFT</h2>
+    <p>from your friends</p>
     <div class="friends-container">
         <h2 id="friends-count">You have 0 friends</h2>
         <div id="friends-list">
@@ -163,7 +164,7 @@
 
             const fetchFriends = async () => {
                 try {
-                    const response = await fetch('/api/referrals/' + localStorage.getItem('username'));
+                    const response = await fetch('/api/referrals?username=' + localStorage.getItem('username'));
                     if (!response.ok) {
                         throw new Error('Failed to fetch friends');
                     }
