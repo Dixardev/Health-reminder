@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Function to update the coin balance on the UI
     function updateCoinBalance() {
-        coinBalanceEl.textContent = `${coinBalance} SFT`;
+        coinBalanceEl.textContent = `${coinBalance.toLocaleString()} SFT`;
     }
 
     // Function to update the status message on the UI
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const elapsedTime = rewardInterval - remainingTime;
                 const coinsMined = Math.floor((elapsedTime / rewardInterval) * totalCoins);
-                coinBalanceEl.textContent = `${coinBalance + coinsMined} SFT`;
+                coinBalanceEl.textContent = `${(coinBalance + coinsMined).toLocaleString()} SFT`;
             }
         }
 

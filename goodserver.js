@@ -4,77 +4,96 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
 const cors = require('cors');
-const User = require('./models/User');
-const jwt = require('jsonwebtoken');
 
-// Load environment variables from .env file
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Connect to MongoDB using the connection string from the .env file
-let cachedDb = null;
-async function connectToDatabase(uri) {
-  if (cachedDb) {
-    return cachedDb;
-  }
-  const client = await mongoose.connect(uri);
-  cachedDb = client.connection.db;
-  return cachedDb;
-}
-connectToDatabase(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error(err));
 
-// Middleware to parse JSON bodies and enable CORS
 app.use(express.json());
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://www.softcoin.world'],
-  credentials: true
-}));
-
-// Middleware to serve static files from the 'public' directory
+app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Route to serve the main index.html file
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+const User = require('./models/User');
 
-// Favicon route (if you have a favicon.ico in the public directory)
-app.get('/favicon.ico', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
-});
-
-// Auth Middleware
-function authenticateToken(req, res, next) {
-  const token = req.headers['authorization'];
-  if (!token) return res.sendStatus(401);
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
-}
-
-// Routes
 const authRoutes = require('./routes/auth');
-const startMining = require('./api/startMining');
-const miningStatus = require('./api/miningStatus');
 const referralRoutes = require('./routes/referrals');
 
-// Route to start mining
-app.post('/api/startMining', authenticateToken, startMining);
-
-app.post('/api/miningStatus', authenticateToken, miningStatus);
-
 app.use('/api/auth', authRoutes);
-app.use('/api', authenticateToken, referralRoutes);
+app.use('/api', referralRoutes);
+
+app.post('/api/startMining', async (req, res) => {
+    const { username } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (user.isMining) return res.status(400).json({ message: 'Mining already in progress' });
+
+        user.isMining = true;
+        user.miningStartTime = new Date();
+        await user.save();
+
+        res.status(200).json({
+            miningStartTime: user.miningStartTime,
+            coinBalance: user.coinBalance
+        });
+    } catch {
+        res.status(500).json({ message: 'Error starting mining' });
+    }
+});
+
+app.post('/api/miningStatus', async (req, res) => {
+    const { username } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const currentTime = Date.now();
+        const miningEndTime = new Date(user.miningStartTime).getTime() + (2 * 60 * 60 * 1000);
+
+        if (user.isMining && currentTime >= miningEndTime) {
+            user.coinBalance += 15000; // Add the mined coins to the user's balance
+            user.isMining = false;
+            user.miningStartTime = null;
+            await user.save();
+            return res.status(200).json({
+                miningComplete: true,
+                coinBalance: user.coinBalance
+            });
+        }
+
+        res.status(200).json({
+            miningStartTime: user.miningStartTime,
+            coinBalance: user.coinBalance
+        });
+    } catch {
+        res.status(500).json({ message: 'Error retrieving mining status' });
+    }
+});
+
+const htmlFiles = ['friends', 'tasks', 'market', 'softie', 'more', 'upgrades', 'login', 'register'];
+htmlFiles.forEach(file => {
+    app.get(`/${file}`, (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', `${file}.html`));
+    });
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err);
+    res.status(500).json({ message: 'Internal server error.' });
+});
 
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+    console.log(`Server running at http://localhost:${port}`);
 });
 
 module.exports = app;

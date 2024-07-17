@@ -5,18 +5,15 @@ const User = require('../models/User'); // Adjust the path according to your pro
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// User registration endpoint (existing code)
+// User registration endpoint
 router.post('/register', async (req, res) => {
-    console.log('Received registration data:', req.body);  // Log incoming data
     const { fullName, username, email, password, referralUsername } = req.body;
 
-    // Validate email format
     const emailRegex = /\S+@\S+\.\S+/;
     if (!emailRegex.test(email)) {
         return res.status(400).json({ message: 'Invalid email format' });
     }
 
-    // Validate password length
     if (password.length < 8) {
         return res.status(400).json({ message: 'Password must be at least 8 characters long' });
     }
@@ -35,24 +32,27 @@ router.post('/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        let referrer = null;
+        if (referralUsername) {
+            referrer = await User.findOne({ username: referralUsername });
+        }
+
         const newUser = new User({
             fullName,
             username,
             email,
             password: hashedPassword,
-            referralUsername
+            referralUsername,
+            referredBy: referrer ? referrer._id : null,
+            coinBalance: 50000 // Initial bonus for the referred friend
         });
 
         await newUser.save();
 
-        // Update referral bonuses
-        if (referralUsername) {
-            const referrer = await User.findOne({ username: referralUsername });
-            if (referrer) {
-                referrer.referrals.push(username);
-                await referrer.save();
-                await updateReferralBonuses(referrer, 1);
-            }
+        if (referrer) {
+            referrer.referrals.push(newUser._id);
+            referrer.coinBalance += 50000; // Bonus for the referrer
+            await referrer.save();
         }
 
         res.status(201).json({ message: 'User registered successfully' });
@@ -62,32 +62,20 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// User login endpoint
 router.post('/login', async (req, res) => {
     const { usernameEmail, password } = req.body;
 
     try {
         const user = await User.findOne({ $or: [{ username: usernameEmail }, { email: usernameEmail }] });
-
-        if (!user) {
-            return res.status(400).json({ message: 'User not found' });
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(400).json({ message: 'Invalid username/email or password' });
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-
-        if (!isPasswordValid) {
-            return res.status(400).json({ message: 'Invalid password' });
-        }
-
-        // Generate JWT token
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
         res.status(200).json({ message: 'Login successful', token, username: user.username });
-    } catch (error) {
-        console.error('Error during login:', error);
+    } catch {
         res.status(500).json({ message: 'Error logging in user' });
     }
 });
-
 
 module.exports = router;

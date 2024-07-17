@@ -9,15 +9,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     registrationForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
+        event.preventDefault(); // Prevent default form submission behavior
 
+        // Extract form data
         const fullName = document.getElementById('full-name').value.trim();
         const username = document.getElementById('username').value.trim();
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value.trim();
         const confirmPassword = document.getElementById('confirm-password').value.trim();
-        const referralUsername = new URLSearchParams(window.location.search).get('ref') || document.getElementById('referral-username').value.trim();
+        const referralUsername = document.getElementById('referral-username').value.trim();
 
+        console.log('Form data:', { fullName, username, email, password, confirmPassword, referralUsername });
+
+        // Basic validation
         if (!fullName || !username || !email || !password || !confirmPassword) {
             showAlert('All fields except referral username are required', 'danger');
             return;
@@ -28,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Construct the payload
         const payload = {
             fullName,
             username,
@@ -49,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 showAlert('Registration successful', 'success');
-                window.location.href = '/login';
+                window.location.href = '/login'; // Redirect to the login page
             } else {
                 showAlert(data.message || 'Registration failed', 'danger');
             }

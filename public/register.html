@@ -83,11 +83,11 @@
         <input type="password" id="confirm-password" placeholder="Confirm Password" required>
         <input type="text" id="referral-username" placeholder="Referral Username (Optional)">
         <button type="submit">Register</button>
-        <a href="login.html" class="link">Already have an account? Log in here</a>
+        <a href="/login" class="link">Already have an account? Log in here</a>
     </form>
     <p id="registration-message"></p>
-    <script src="register.js"></script>
-    <script>
+    <script src="register.js" defer></script>
+ <!--   <script>
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const referrer = urlParams.get('ref');
@@ -95,7 +95,6 @@
                 document.getElementById('referral-username').value = referrer;
             }
         });
-    </script>
-    <script src="dark-mode.js"></script>
+    </script> -->
 </body>
 </html>
