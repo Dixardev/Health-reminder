@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 showAlert('Registration successful', 'success');
-                window.location.href = 'login.html';
+                window.location.href = '/login';
             } else {
                 showAlert(data.message || 'Registration failed', 'danger');
             }

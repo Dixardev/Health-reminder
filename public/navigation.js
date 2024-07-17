@@ -22,11 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function highlightActiveNavItem() {
-        const currentPage = window.location.pathname.split("/").pop();
+        const currentPath = window.location.pathname;
         const navItems = document.querySelectorAll("#bottom-nav .nav-item");
         navItems.forEach(item => {
             const href = item.getAttribute("href");
-            if (href === currentPage) {
+            if (href === currentPath) {
                 item.classList.add("active");
             } else {
                 item.classList.remove("active");
@@ -36,5 +36,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadNavMenu();
 });
-
-

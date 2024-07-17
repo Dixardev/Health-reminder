@@ -1,17 +1,21 @@
+// api/startMining.js
+const connectToDatabase = require('../utils/db');
 const User = require('../models/User');
-const redisClient = require('../redisClient');
 
 module.exports = async function handler(req, res) {
     if (req.method === 'POST') {
         const { username } = req.body;
 
         try {
+            await connectToDatabase();
+
             const user = await User.findOne({ username });
 
             if (!user) {
                 return res.status(404).json({ message: 'User not found' });
             }
 
+            // Check if the user is currently mining
             if (user.isMining) {
                 return res.status(400).json({ message: 'Mining already in progress' });
             }
@@ -19,13 +23,6 @@ module.exports = async function handler(req, res) {
             user.isMining = true;
             user.miningStartTime = new Date();
             await user.save();
-
-            const cacheKey = `miningStatus:${username}`;
-            const cacheTTL = 3600; // Cache Time-To-Live in seconds (1 hour)
-            redisClient.setex(cacheKey, cacheTTL, JSON.stringify({
-                miningStartTime: user.miningStartTime,
-                coinBalance: user.coinBalance
-            }));
 
             return res.status(200).json({
                 message: 'Mining started',

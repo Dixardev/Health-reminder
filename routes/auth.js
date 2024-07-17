@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const User = require('../models/User'); // Adjust the path according to your project structure
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const redisClient = require('../redisClient'); // Import Redis client
+const User = require('../models/User');
 
 // User registration endpoint
 router.post('/register', async (req, res) => {
@@ -32,7 +33,6 @@ router.post('/register', async (req, res) => {
 
         await newUser.save();
 
-        // Update referral bonuses
         if (referralUsername) {
             const referrer = await User.findOne({ username: referralUsername });
             if (referrer) {
@@ -67,11 +67,45 @@ router.post('/login', async (req, res) => {
         }
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        // Store token in Redis
+        await redisClient.set(`auth_${token}`, JSON.stringify(user), 'EX', 3600);
+
         res.status(200).json({ message: 'Login successful', token, username: user.username });
     } catch (error) {
         console.error('Error during login:', error);
         res.status(500).json({ message: 'Error logging in user' });
     }
 });
+
+// Middleware to verify token
+const verifyToken = (req, res, next) => {
+    const token = req.headers['authorization']?.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: 'Access denied. No token provided.' });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ message: 'Invalid token.' });
+        }
+
+        try {
+            // Check token in Redis
+            const userData = await redisClient.get(`auth_${token}`);
+
+            if (!userData) {
+                return res.status(401).json({ message: 'Session expired. Please log in again.' });
+            }
+
+            req.user = JSON.parse(userData);
+            next();
+        } catch (error) {
+            console.error('Redis error:', error);
+            res.status(500).json({ message: 'Internal server error.' });
+        }
+    });
+};
 
 module.exports = router;

@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alertBox.style.display = 'block';
 
                 // Redirect to the homepage after login
-                window.location.href = 'index.html';
+                window.location.href = '/';
             } else {
                 alertBox.className = 'custom-alert alert-danger';
                 alertBox.textContent = result.message || 'Login failed!';

@@ -40,17 +40,17 @@
     <button id="mine-btn">Start Mining</button>
     
     <div id="nav-placeholder"></div>
-    <script src="navigation.js"></script>
+    <script src="navigation.js" defer></script>
     <script src="dark-mode.js"></script>
-    <script src="script.js"></script>
-    <script>
+    <script src="script.js" defer></script>
+    <script defer>
         document.addEventListener("DOMContentLoaded", () => {
             // Check if username is stored in localStorage
             const username = localStorage.getItem('username');
 
             // If username is not found, redirect to register.html
             if (!username) {
-                window.location.href = 'register.html';
+                window.location.href = '/register';
             } else {
                 // Display the username in the element with id="user-name"
                 document.getElementById('user-name').textContent = username;
@@ -61,7 +61,7 @@
     </script>
     <script>
 function upgrades() {
-    window.location.href = 'upgrades.html'; // Replace with your target URL
+    window.location.href = '/upgrades'; // Replace with your target URL
 }
 </script>
 </body>
