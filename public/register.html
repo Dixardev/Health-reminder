@@ -6,6 +6,11 @@
     <title>Register - Friends</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <meta name="description" content="Cryptocurrency Mining and Earning Platform.">
+    <meta name="keywords" content="Softcoin, cryptocurrency, mining">
+    <meta name="author" content="SoftCoin">
+    <link rel="icon" href="icons/softcoin.png" type="image/x-icon">
+    <link rel="manifest" href="manifest.json">
     <style>
         body {
             font-family: 'Poppins', sans-serif;
@@ -87,6 +92,21 @@
     </form>
     <p id="registration-message"></p>
     <script src="register.js" defer></script>
+        <script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(error => {
+                console.log('ServiceWorker registration failed: ', error);
+            });
+    });
+}
+
+
+</script>
  <!--   <script>
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
