@@ -16,7 +16,7 @@
       "dest": "/server.js"
     },
     {
-      "src": "/index",
+      "src": "/",
       "dest": "/index.html"
     },
     {
