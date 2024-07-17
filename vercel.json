@@ -15,45 +15,5 @@
       "src": "/api/(.*)",
       "dest": "/server.js"
     },
-    {
-      "src": "/",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/friends",
-      "dest": "/friends.html"
-    },
-    {
-      "src": "/tasks",
-      "dest": "/tasks.html"
-    },
-    {
-      "src": "/market",
-      "dest": "/market.html"
-    },
-    {
-      "src": "/softie",
-      "dest": "/softie.html"
-    },
-    {
-      "src": "/more",
-      "dest": "/more.html"
-    },
-    {
-      "src": "/upgrades",
-      "dest": "/upgrades.html"
-    },
-    {
-      "src": "/login",
-      "dest": "/login.html"
-    },
-    {
-      "src": "/register",
-      "dest": "/register.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
   ]
 }
