@@ -2,7 +2,7 @@
   "name": "Softcoin",
   "short_name": "Softcoin",
   "description": "Cryptocurrency Mining and Earning Platform.",
-  "start_url": "/loading.html",
+  "start_url": "index.html",
   "display": "fullscreen",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
