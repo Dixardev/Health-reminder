@@ -25,7 +25,7 @@
             animation: fadeIn 2s ease-in;
         }
         .btn {
-            background: #4CAF50;
+            background: #fcc315;
             color: #fff;
             border: none;
             padding: 10px 20px;
@@ -42,9 +42,9 @@
             transform: scale(1.1);
         }
         .hero {
-            background: linear-gradient(to right, #020d4f, #0158a2);
-            padding: 50px 0;
+            padding: 0px 0;
             padding-top: 10px;
+            margin-bottom: 0;
             margin-top: 0;
             text-align: center;
             position: relative;
@@ -53,7 +53,7 @@
             font-size: 2em;
             margin-bottom: 20px;
             font-weight: 600;
-            color: white;
+            color: #2C3A4D;
             animation: slideInLeft 1s ease-out;
         }
         .hero p {
@@ -65,13 +65,13 @@
         h3 {
            color: gray;
         }
-        .hero-image img {
+        .cta-image img {
             max-width: 400px;
-            width: 100%;
+            width: 80%;
             height: auto;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             animation: zoomIn 1s ease-out;
+            padding-top: 0;
+            margin-top: 0;
         }
         .call-to-action {
             margin-top: 30px;
@@ -79,7 +79,7 @@
         .section {
             padding: 50px 0;
             text-align: center;
-            background: #fff;
+            background: white;
             margin-bottom: 20px;
         }
         .section h2 {
@@ -94,7 +94,7 @@
             display: flex;
             justify-content: space-around;
             flex-wrap: wrap;
-            background: linear-gradient(to right, white, white);
+            background: white;
         }
         .feature {
             width: 45%;
@@ -108,17 +108,17 @@
             margin-bottom: 10px;
         }
         .features h2 {
-           color: #034d0b;
+           color: #fadf5d;
            font-size: 1em;
         }
         .feature h3 {
             font-size: 1em;
             margin-bottom: 10px;
-            color: black;
+            color: #2C3A4D;
         }
         .feature p {
             font-size: 1em;
-            color: lightgray;
+            color: gray;
         }
         img {
           width: 300px;
@@ -165,7 +165,9 @@
                 transform: scale(1.05);
             }
         }
-       .feature
+       .about {
+           background-color: white;
+       }
     </style>
 </head>
 
@@ -177,7 +179,7 @@
             <img src="iconns/softword.png" alt="Softcoin Logo" class="logo">
         </div>
         <div class="call-to-action">
-                <button onclick="downloadFile()" class="btn install-app">Install App</button>
+                <button onclick="downloadFile()" class="btn install-app">Get Started</button>
         </div>
     </section>
     <section class="section about">
@@ -188,8 +190,8 @@
         <div class="container">
             <h3>Softcoin is positioned to be a groundbreaking force in the crypto landscape, poised to redefine industry standards.</h3>
             <h3>With a deep root in community engagement, we ensure every participant plays a pivotal role in our collective success.</h3>
-            <h3>Start mining Softcoin today, and embark on a journey toward financial freedom.</h3>
-            <button onclick="downloadFile()" class="btn install-app">Install App</button>
+            <h3>Start mining Softcoin today, and embark on a journey toward true financial freedom.</h3>
+            <button onclick="downloadFile()" class="btn install-app">Register</button>
         </div>
     </section>
     <div class="tokenomics">
@@ -200,22 +202,22 @@
             <h2>What Sets Softcoin Apart?</h2>
             <div class="features">
                 <div class="feature">
-                    <img src="iconns/softie.svg" alt="Ease of Use">
+                    <img src="design/softie.svg" alt="Ease of Use">
                     <h3>Ease of Use</h3>
-                    <p>Simplified processes for seamless navigation.</p>
+                    <p>Simplified mining process for seamless navigation.</p>
                 </div>
                 <div class="feature">
-                    <img src="iconns/market.svg" alt="Diverse Earning Opportunities">
+                    <img src="design/market.svg" alt="Diverse Earning Opportunities">
                     <h3>Diverse Earning Opportunities</h3>
-                    <p>Multiple avenues for generating income.</p>
+                    <p>Multiple avenues for generating passive income.</p>
                 </div>
                 <div class="feature">
-                    <img src="iconns/tasks.svg" alt="Assured Listing">
+                    <img src="design/tasks.svg" alt="Assured Listing">
                     <h3>Assured Listing</h3>
-                    <p>Planned listings on major exchanges for broader accessibility.</p>
+                    <p>Listing on major exchanges for broader accessibility is assured.</p>
                 </div>
                 <div class="feature">
-                    <img src="iconns/friends.svg" alt="Community Focus">
+                    <img src="design/friends.svg" alt="Community Focus">
                     <h3>Community Focus</h3>
                     <p>Built to empower and reward our community members.</p>
                 </div>
@@ -225,7 +227,7 @@
     <section class="section final-cta">
         <div class="container">
             <p>Join us as we disrupt the crypto sphere with unparalleled innovation and opportunity.</p>
-            <button onclick="downloadFile()" class="btn get-started">Get Started</button>
+            <button onclick="downloadFile()" class="btn get-started">Register</button>
         </div>
     </section>
     <section class="section">
@@ -255,12 +257,13 @@
     <footer  class="section">
        <p><p>&copy; Softcoin 2024.</p>
 </p>
+<!-- https://fastupload.io/71dbd17d4b195e81 -->
     </footer>
     <script>
 function downloadFile() {
     const link = document.createElement('a');
-    link.href = 'https://fastupload.io/71dbd17d4b195e81';  // Replace with the actual path to your file
-    link.download = 'softcoin.apk';   // Replace with the desired file name
+    link.href = '/register';  // Replace with the actual path to your file
+  //  link.download = 'softcoin.apk';   // Replace with the desired file name
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

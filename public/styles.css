@@ -3,7 +3,7 @@ body {
     margin: 0;
     font-family: 'poppins', sans-serif;
     background-color: #f4f4f4;
-    color: #000;
+    color: #2C3A4D;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -12,7 +12,7 @@ body {
     transition: background-color 0.3s, color 0.3s;
     justify-content: flex-start;
     overflow-y: auto;
-    padding-bottom: 200px;
+    padding-bottom: ;
 }
 
 body.dark-mode {
@@ -26,8 +26,8 @@ body.dark-mode {
     align-items: center;
     padding: 20px 20px;
     width: 100%;
-    
     box-sizing: border-box;
+    margin-bottom: 0; /* Remove gap */
 }
 
 #user-info {
@@ -54,8 +54,8 @@ body.dark-mode {
 #upgrade-btn {
     padding: 10px 20px;
     font-size: 15px;
-    margin-right: 10px;
-    background-color: blue;
+    margin-left: 10px;
+    background-color: #028900;
     color: white;
     border: none;
     border-radius: 10px; /* Curved corners */
@@ -105,7 +105,7 @@ body.dark-mode {
 }
 
 input:checked + .slider {
-    background-color: blue;
+    background-color: #2C3A4D;
 }
 
 input:checked + .slider:before {
@@ -114,8 +114,9 @@ input:checked + .slider:before {
 
 #coin-balance {
     font-size: 30px;
-    margin: 20px 0 10px 0;
-    color: black; /* Light theme color */
+    margin: 20px 5px 0;
+    color: #028900; /* Light theme color */
+    padding: 0;
 }
 
 body.dark-mode #coin-balance {
@@ -125,7 +126,8 @@ body.dark-mode #coin-balance {
 #status-message {
     font-size: 15px;
     margin-bottom: 20px;
-    margin-top: 0;
+    margin: 0;
+    padding: 0;
 }
 
 #sound-wave-container {
@@ -136,13 +138,13 @@ body.dark-mode #coin-balance {
     margin-bottom: 20px;
     width: 70%;
     padding: 3.3em;
-    padding-top: 14em;
+    padding-top: 5em;
     padding-bottom: 1em;
 }
 
 .bar {
-    width: 10%;
-    height: 50px;
+    width: 5%;
+    height: 30px;
     background-color: #000;
     margin: 0 5px;
     animation: soundWave 2s infinite;
@@ -171,7 +173,7 @@ body.dark-mode #coin-balance {
 #mine-btn {
     padding: 15px 30px;
     font-size: 20px;
-    background-color: blue;
+    background-color: #028900;
     color: white;
     border: none;
     border-radius: 5px;
@@ -228,7 +230,7 @@ body.dark-mode .bar:nth-child(1) { background-color: #e74c3c; animation-delay: 0
 
 #timer {
   padding-bottom: 0;
-  color: blue;
+  color: #028900;
   font-size: 15px;
 }
 
@@ -238,81 +240,110 @@ p {
 /* Add styles for the bottom navigation menu */
 #bottom-nav {
   position: fixed;
-bottom: 0;
-left: 0;
-width: 100%;
-padding: px;
-display: flex;
-justify-content: space-around;
-background-color: #fff;
-border-top: 1px solid #ccc;
-box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-z-index: 1000;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px 0;
+  display: flex;
+  justify-content: space-around;
+  background: rgba(3,9,19,0.8);
+  backdrop-filter: blur(50px);
+  border-top-left-radius: 50px;
+  border-top-right-radius: 50px;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
 }
 
 #bottom-nav .nav-item {
-flex: 1;
-text-align: center;
-padding: 10px 0;
-padding-bottom: 30px;
-color: lightgray;
-text-decoration: none;
-transition: background-color 0.3s, color 0.3s;
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  color: lightgray;
+  text-decoration: none;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 #bottom-nav .nav-item img {
-display: block;
-margin: 0 auto 5px;
-width: 24px;
-height: 24px;
-filter: brightness(0) invert(0.8); /* This makes the icon light gray /
-fill: lightgray; / Ensure fill property is set to light gray */
+  display: block;
+  margin: 0 auto 5px;
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(0.8); /* This makes the icon light gray */
+  fill: lightgray; /* Ensure fill property is set to light gray */
 }
 
 #bottom-nav .nav-item span {
-display: block;
-font-size: 10px;
-color: lightgray;
-}
-
-#bottom-nav .nav-item
-{
-background-color: #f4f4f4;
+  display: block;
+  font-size: 10px;
+  color: lightgray;
 }
 
 #bottom-nav .nav-item.active img {
-filter: none; /* This resets the filter to show the original icon color /
-fill: blue; / Change fill color to blue for active icon */
+  filter: none; /* This resets the filter to show the original icon color */
+  fill: blue; /* Change fill color to blue for active icon */
 }
 
 #bottom-nav .nav-item.active span {
-color: blue;
+  color: #028900;
 }
 
 body.dark-mode #bottom-nav {
-background-color: #121212;
-border-top: 1px solid #444;
+  background: rgba(44, 58, 77, 0.8);
+  backdrop-filter: blur(10px);
+  border-top-left-radius: 50px;
+  border-top-right-radius: 50px;
+  border-top: 1px solid #444;
 }
 
 body.dark-mode #bottom-nav .nav-item {
-color: lightgray;
+  color: lightgray;
 }
 
 body.dark-mode #bottom-nav .nav-item img {
-filter: brightness(0) invert(0.8); /* This makes the icon light gray /
-fill: lightgray; / Ensure fill property is set to light gray */
-}
-
-body.dark-mode #bottom-nav .nav-item
-{
-background-color: #333;
+  filter: brightness(0) invert(0.8); /* This makes the icon light gray */
+  fill: lightgray; /* Ensure fill property is set to light gray */
 }
 
 body.dark-mode #bottom-nav .nav-item.active img {
-filter: none; /* This resets the filter to show the original icon color /
-fill: blue; / Change fill color to blue for active icon */
+  filter: none; /* This resets the filter to show the original icon color */
+  fill: blue; /* Change fill color to blue for active icon */
 }
 
 body.dark-mode #bottom-nav .nav-item.active span {
-color: #0000ff;
+  color: #028900;
+}
+
+
+/* Slideshow Container */
+#slideshow-container {
+    width: 80%;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    margin-top: 0; /* Remove gap */
+    padding-bottom: 0;
+    margin-bottom: 0;
+    height: 20%;
+}
+
+.slide {
+    display: none;
+    flex: 0 0 100%; /* Ensure each slide takes full width */
+    transition: transform 1s ease;
+    
+}
+
+.slide img, .slide video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    margin: 0;
+    border-radius: 20px;
+}
+
+/* Add active class to the first slide */
+.slide.active {
+    display: block;
+    transform: translateX(0%);
 }

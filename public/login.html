@@ -10,21 +10,32 @@
             background-color: #f0f0f0;
             color: #333;
             transition: background-color 0.3s, color 0.3s;
+            padding-top: 20px;
         }
         .dark-mode {
             background-color: #121212;
             color: #f0f0f0;
         }
+        p {
+            font-size: 2em;
+            color: #2C3A4D;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 {
+            color: #028900;
+        }
         header {
             text-align: center;
-            padding: 1em 0;
+            padding: 0;
         }
         form {
-            max-width: 400px;
+            width: 80%;
             margin: 0 auto;
-            padding: 2em;
+            padding: 20px;
+            padding-top: 10px;
             background: #fff;
-            border-radius: 5px;
+            border-radius: 20px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         input, button {
@@ -35,14 +46,17 @@
             border-radius: 3px;
             box-sizing: border-box;
         }
+        label {
+            color: #2C3A4D;
+        }
         button {
-            background: #007bff;
+            background: #028900;
             color: white;
             border: none;
             cursor: pointer;
         }
         button:hover {
-            background: #0056b3;
+            background: #015900;
         }
         .custom-alert {
             display: none;
@@ -65,15 +79,20 @@
             text-align: center;
             margin: 1em 0;
         }
+        img {
+            width: 40%;
+            margin-right: 25px;
+        }
     </style>
 </head>
 <body>
       <header>
-        <p>Welcome to Softcoin</p>
-        <h1>Log In</h1>
+        <img src="iconns/softword.png" alt="Softcoin Logo">
+        <p>Welcome</p>
     </header>
         <form id="login-form">
           <div id="alert-box" class="custom-alert"></div>
+             <h1>Log In</h1>
                 <label for="username-email">Username</label>
                 <input type="text" id="username-email" name="usernameEmail" required>
                 <label for="password">Password</label>

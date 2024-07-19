@@ -15,17 +15,34 @@
 <body>
     <div id="top-bar">
         <div id="user-info">
-            <img src="iconns/avatar.png" alt="Avatar" id="avatar">
+            <img src="icons/softcoin.png" alt="Avatar" id="avatar">
             <span>Hello, <span id="user-name">User Name</span>!</span>
         </div>
         <div id="controls">
-            <button onclick="upgrades()" id="upgrade-btn"><i class="fas fa-arrow-up"></i> Upgrades</button>
-            <label class="switch">
+           <label class="switch">
                 <input type="checkbox" id="dark-mode-toggle">
                 <span class="slider"></span>
             </label>
+            <button onclick="upgrades()" id="upgrade-btn"><i class="fas fa-arrow-up"></i> Upgrades</button>
         </div>
     </div>
+
+    <!-- Slideshow Container -->
+    <div id="slideshow-container">
+      <div class="slide">
+          <a href="/join-softcoin"><video width="100%" autoplay loop>
+    <source src="iconns/softcoinn.mp4" type="video/mp4">
+    Your browser does not support playing videos.
+</video></a>
+        </div>
+        <div class="slide">
+            <a href="/market"><img src="iconns/banner.png" alt="Slide 2"></a>
+        </div>
+        <div class="slide">
+            <a href="/friends"><img src="iconns/slide2.png" alt="Slide 3"></a>
+        </div>
+    </div>
+
     <strong><p id="coin-balance">0 SFT</p></strong>
     <p id="status-message"></p>
     <div id="sound-wave-container">
@@ -49,7 +66,7 @@
     <script src="navigation.js" defer></script>
     <script src="dark-mode.js"></script>
     <script src="script.js" defer></script>
-<script defer>
+    <script defer>
         document.addEventListener("DOMContentLoaded", () => {
             // Check if username is stored in localStorage
             const username = localStorage.getItem('username');
@@ -65,10 +82,26 @@
             // Add any additional scripts here (if needed)
         });
     </script>
+    <script defer>
+        function upgrades() {
+            window.location.href = '/upgrades'; // Replace with your target URL
+        }
+    </script>
     <script>
-function upgrades() {
-    window.location.href = '/upgrades'; // Replace with your target URL
-}
-</script>
+        // Slideshow script
+        let slideIndex = 0;
+        showSlides();
+
+        function showSlides() {
+            let slides = document.getElementsByClassName("slide");
+            for (let i = 0; i < slides.length; i++) {
+                slides[i].style.display = "none";  
+            }
+            slideIndex++;
+            if (slideIndex > slides.length) {slideIndex = 1}    
+            slides[slideIndex-1].style.display = "block";  
+            setTimeout(showSlides, 10000); // Change image every 3 seconds
+        }
+    </script>
 </body>
 </html>

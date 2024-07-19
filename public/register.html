@@ -4,34 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Friends</title>
-    <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <meta name="description" content="Cryptocurrency Mining and Earning Platform.">
     <meta name="keywords" content="Softcoin, cryptocurrency, mining">
     <meta name="author" content="SoftCoin">
     <link rel="icon" href="icons/softcoin.png" type="image/x-icon">
-    <link rel="manifest" href="manifest.json">
     <style>
         body {
             font-family: 'Poppins', sans-serif;
             background-color: #f0f0f0;
             color: #333;
             transition: background-color 0.3s, color 0.3s;
+            padding-top: 20px;
         }
         .dark-mode {
             background-color: #121212;
             color: #f0f0f0;
         }
+        p {
+            font-size: 2em;
+            color: #2C3A4D;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 {
+            color: #028900;
+        }
         header {
             text-align: center;
-            padding: 1em 0;
+            padding: 0;
         }
         form {
-            max-width: 400px;
+            max-width: 80%;
             margin: 0 auto;
-            padding: 2em;
-            background: #fff;
-            border-radius: 5px;
+            padding: 20px;
+            background: white;
+            border-radius: 20px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         input, button {
@@ -42,14 +50,17 @@
             border-radius: 3px;
             box-sizing: border-box;
         }
+        label {
+            color: #2C3A4D;
+        }
         button {
-            background: #007bff;
+            background: #028900;
             color: white;
             border: none;
             cursor: pointer;
         }
         button:hover {
-            background: #0056b3;
+            background: #015900;
         }
         .custom-alert {
             display: none;
@@ -72,15 +83,20 @@
             text-align: center;
             margin: 1em 0;
         }
+        img {
+            width: 40%;
+            margin-right: 25px;
+        }
     </style>
 </head>
 <body>
     <header>
-        <p>Welcome to Softcoin</p>
-        <h1>Register</h1>
+        <img src="iconns/softword.png" alt="Softcoin Logo">
+        <p>Welcome</p>
     </header>
     <form id="registration-form">
         <div id="alert-box" class="custom-alert"></div>
+        <h1>Register</h1>
         <input type="text" id="full-name" placeholder="Full Name" required>
         <input type="text" id="username" placeholder="Username" required>
         <input type="email" id="email" placeholder="Email" required>
@@ -92,22 +108,7 @@
     </form>
     <p id="registration-message"></p>
     <script src="register.js" defer></script>
-        <script>
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(error => {
-                console.log('ServiceWorker registration failed: ', error);
-            });
-    });
-}
-
-
-</script>
- <script>
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const referrer = urlParams.get('ref');
