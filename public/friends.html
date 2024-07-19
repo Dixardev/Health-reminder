@@ -1,12 +1,11 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Friends</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
+            <style>
         body {
             font-family: 'Poppins', Arial, sans-serif;
             margin: 0;
@@ -121,62 +120,6 @@
     <div id="nav-placeholder"></div>
     <script src="navigation.js"></script>
     <script src="dark-mode.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const inviteButton = document.getElementById('invite-button');
-            const alertBox = document.getElementById('alert-box');
-
-            const showAlert = (message, type) => {
-                alertBox.textContent = message;
-                alertBox.className = `custom-alert alert-${type}`;
-                alertBox.style.display = 'block';
-                setTimeout(() => {
-                    alertBox.style.display = 'none';
-                }, 3000);
-            };
-
-            inviteButton.addEventListener('click', () => {
-                const referralLink = 'https://www.softcoin.world/register.html?ref=' + localStorage.getItem('username');
-                navigator.clipboard.writeText(referralLink).then(() => {
-                    showAlert('Referral link copied to clipboard!', 'success');
-                }).catch(err => {
-                    showAlert('Failed to copy referral link', 'danger');
-                    console.error('Error:', err);
-                });
-            });
-
-            const updateFriendsList = (friends) => {
-                const friendsList = document.getElementById('friends-list');
-                const friendsCount = document.getElementById('friends-count');
-                const totalEarnings = friends.reduce((acc, friend) => acc + friend.earned, 0);
-
-                friendsCount.textContent = `You have ${friends.length} friends`;
-                document.querySelector('.earnings').textContent = `${totalEarnings} SFT`;
-
-                friendsList.innerHTML = '';
-                friends.forEach(friend => {
-                    const friendItem = document.createElement('div');
-                    friendItem.className = 'friend';
-                    friendItem.innerHTML = `<span>${friend.username}</span><span>${friend.earned} SFT</span>`;
-                    friendsList.appendChild(friendItem);
-                });
-            };
-
-            const fetchFriends = async () => {
-                try {
-                    const response = await fetch('/api/referrals?username=' + localStorage.getItem('username'));
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch friends');
-                    }
-                    const friends = await response.json();
-                    updateFriendsList(friends);
-                } catch (error) {
-                    console.error('Error fetching friends:', error);
-                }
-            };
-
-            fetchFriends();
-        });
-    </script>
+    <script src="friends.js"></script>
 </body>
 </html>

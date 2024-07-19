@@ -63,10 +63,10 @@ app.post('/api/miningStatus', async (req, res) => {
     }
 });
 
-['friends', 'tasks', 'market', 'softie', 'more', 'upgrades', 'login', 'register'].forEach(file => {
+ ['friends', 'tasks', 'market', 'softie', 'more', 'upgrades', 'login', 'register', 'join-softcoin'].forEach(file => {
     app.get(`/${file}`, (req, res) => {
         res.sendFile(path.join(__dirname, 'public', `${file}.html`));
-    });
+   });
 });
 
 app.get('/', (req, res) => {

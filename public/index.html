@@ -11,7 +11,6 @@
     <meta name="keywords" content="Softcoin, cryptocurrency, mining">
     <meta name="author" content="SoftCoin">
     <link rel="icon" href="icons/softcoin.png" type="image/x-icon">
-    <link rel="manifest" href="manifest.json">
 </head>
 <body>
     <div id="top-bar">
@@ -45,24 +44,11 @@
     <button id="mine-btn">Start Mining</button>
     
     <div id="nav-placeholder"></div>
+    <div id="main-content"></div>
+
     <script src="navigation.js" defer></script>
     <script src="dark-mode.js"></script>
     <script src="script.js" defer></script>
-        <script>
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(error => {
-                console.log('ServiceWorker registration failed: ', error);
-            });
-    });
-}
-
-
-</script>
 <script defer>
         document.addEventListener("DOMContentLoaded", () => {
             // Check if username is stored in localStorage
