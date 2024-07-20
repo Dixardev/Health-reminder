@@ -59,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateStatusMessage("Mining complete!");
                 toggleBarsAnimation(false);
                 mineBtn.disabled = false;
+                updateCoinBalanceWithReferralEarnings(); // Update balance with referral earnings after mining complete
             } else {
                 const hours = Math.floor((remainingTime / (1000 * 60 * 60)) % 24);
                 const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
@@ -97,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateStatusMessage("Mining complete!");
                 mineBtn.disabled = false;
                 toggleBarsAnimation(false);
+                updateCoinBalanceWithReferralEarnings(); // Update balance with referral earnings after mining complete
             } else {
                 updateStatusMessage("Mining not started");
                 mineBtn.disabled = false;
@@ -112,6 +114,18 @@ document.addEventListener("DOMContentLoaded", () => {
         bars.forEach(bar => {
             bar.style.animationPlayState = active ? 'running' : 'paused';
         });
+    }
+
+    // Function to fetch and update balance with referral earnings
+    async function updateCoinBalanceWithReferralEarnings() {
+        try {
+            const response = await fetch(`/api/referrals/${username}`);
+            const data = await response.json();
+            coinBalance = data.totalEarnings;
+            updateCoinBalance();
+        } catch (error) {
+            updateStatusMessage("Failed to update balance with referral earnings");
+        }
     }
 
     // Event listener for mining button

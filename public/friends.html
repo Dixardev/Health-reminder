@@ -1,11 +1,11 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Friends</title>
     <link rel="stylesheet" href="styles.css">
-            <style>
+    <style>
         body {
             font-family: 'Poppins', Arial, sans-serif;
             margin: 0;
@@ -28,12 +28,14 @@
             font-size: 1em;
             margin-top: 5px;
             color: #888;
+            
         }
 
         .earnings {
             font-size: 2em;
-            color: #333;
+            color: #268403;
             margin: 0;
+            padding-top: 0;
         }
 
         body.dark-mode .earnings {
@@ -43,34 +45,50 @@
         .friends-container {
             margin-top: 30px;
             padding: 20px;
-            background: #f9f9f9;
+            background: white;
             border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             text-align: left;
+            width: 90%;
+            color: #2C3A4D;
+            text-align: center;
         }
 
         body.dark-mode .friends-container {
-            background: #1e1e1e;
+            background: #268403;
         }
 
-        .friend {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            color: #2C3A4D;
+            
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
             border-bottom: 1px solid #ddd;
+           
         }
 
-        body.dark-mode .friend {
+        body.dark-mode th, body.dark-mode td {
             border-bottom: 1px solid #333;
         }
 
-        .friend:last-child {
-            border-bottom: none;
+        th {
+            background-color: #f2f2f2;
+            color: #2C3A4D;
+        }
+
+        body.dark-mode th {
+            background-color: white;
         }
 
         .button {
             display: block;
-            background-color: blue;
+            background-color: #268403;
             color: #fff;
             padding: 12px 24px;
             text-decoration: none;
@@ -82,44 +100,127 @@
             z-index: 999;
         }
 
-        .custom-alert {
-            display: none;
-            padding: 1em;
-            margin-bottom: 1em;
-            border: 1px solid transparent;
-            border-radius: 3px;
-        }
+.custom-alert {
+    display: none;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    z-index: 1000;
+    transition: opacity 0.5s ease;
+}
 
-        .alert-success {
-            color: #155724;
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-        }
+.custom-alert.success {
+    background-color: green;
+}
 
-        .alert-danger {
-            color: #721c24;
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
+        #earning-text {
+            margin-bottom: 0;
+            margin-top: 30px;
+        }
+        #from {
+           margin-top: 0;
         }
     </style>
 </head>
 <body>
-    <h1>Friends</h1>
-    <p>Earn 20% for your direct referrals, 10% for their referrals, then 5%, 2.5%, and 1.25% for your fifth-level referrals. Plus earn 15,000 SFT for each invite, while your friend receives 30,000!</p>
+    <h1>Your Friends</h1>
+    <p>Earn 20% of your friends mining rewards, Plus get 50,000 SFT for each invite, and your friend receives 50,000 too!</p>
     <p id="earning-text">You've earned</p>
     <h2 class="earnings">0 SFT</h2>
-    <p>from your friends</p>
+    <p id="from">from your friends</p>
+    <div id="alert-box" class="custom-alert"></div>
     <div class="friends-container">
         <h2 id="friends-count">You have 0 friends</h2>
-        <div id="friends-list">
-            <!-- Friends will be dynamically inserted here -->
-        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+            <tbody id="referrals-table">
+                <!-- Referral data will be dynamically inserted here -->
+            </tbody>
+        </table>
     </div>
-    <button class="button" id="invite-button">Invite a Friend</button>
-    <div id="alert-box" class="custom-alert"></div>
+    <button class="button" id="invite-btn">Invite a Friend</button>
     <div id="nav-placeholder"></div>
     <script src="navigation.js"></script>
     <script src="dark-mode.js"></script>
-    <script src="friends.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const username = localStorage.getItem('username'); // Get the username from local storage
+
+            if (!username) {
+                console.error('Username not found in local storage');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/referrals/${username}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('Fetched data:', data); // Debugging log
+
+                const referralsTable = document.getElementById('referrals-table');
+                const friendsCount = document.getElementById('friends-count');
+                const earnings = document.querySelector('.earnings');
+
+                friendsCount.textContent = `You have ${data.referrals.length} friends`;
+                earnings.textContent = `${data.totalEarnings.toFixed(2)} SFT`;
+
+                data.referrals.forEach(ref => {
+                    const row = document.createElement('tr');
+                    const usernameCell = document.createElement('td');
+                    const balanceCell = document.createElement('td');
+
+                    usernameCell.textContent = ref.username;
+                    balanceCell.textContent = ref.coinBalance;
+
+                    row.appendChild(usernameCell);
+                    row.appendChild(balanceCell);
+                    referralsTable.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching referrals:', error);
+            }
+        });
+    </script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+    const username = localStorage.getItem('username');
+    if (!username) return window.location.href = '/register';
+
+    const inviteBtn = document.getElementById('invite-btn');
+    const alertBox = document.getElementById('alert-box');
+
+    inviteBtn.addEventListener('click', () => {
+        const referralLink = `https://www.softcoin.world/register?ref=${username}`;
+        navigator.clipboard.writeText(referralLink).then(() => {
+            showCustomAlert("Referral link copied to clipboard!", true);
+        }).catch(() => {
+            showCustomAlert("Failed to copy referral link.", false);
+        });
+    });
+
+    function showCustomAlert(message, success) {
+        alertBox.textContent = message;
+        alertBox.className = 'custom-alert';
+        if (success) {
+            alertBox.classList.add('success');
+        }
+        alertBox.style.display = 'block';
+        setTimeout(() => {
+            alertBox.style.display = 'none';
+        }, 3000);
+    }
+});
+</script>
 </body>
 </html>

@@ -3,6 +3,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 const cors = require('cors');
 const connectToDatabase = require('./utils/db');
+const User = require('./models/User');
+const auth = require('./routes/auth');
 
 dotenv.config();
 
@@ -16,12 +18,6 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/auth', require('./routes/auth'));
-const referralRoutes = require('./routes/referrals');
-app.use('/api', referralRoutes);
-
-
-
-const User = require('./models/User');
 
 app.post('/api/startMining', async (req, res) => {
     const { username } = req.body;
@@ -35,7 +31,7 @@ app.post('/api/startMining', async (req, res) => {
         await user.save();
 
         res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance });
-    } catch {
+    } catch (error) {
         res.status(500).json({ message: 'Error starting mining' });
     }
 });
@@ -58,24 +54,47 @@ app.post('/api/miningStatus', async (req, res) => {
         }
 
         res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance });
-    } catch {
+    } catch (error) {
         res.status(500).json({ message: 'Error retrieving mining status' });
     }
 });
 
- ['friends', 'tasks', 'market', 'softie', 'more', 'upgrades', 'login', 'register', 'join-softcoin'].forEach(file => {
-    app.get(`/${file}`, (req, res) => {
-        res.sendFile(path.join(__dirname, 'public', `${file}.html`));
-   });
-});
+app.get('/api/referrals/:username', async (req, res) => {
+    const { username } = req.params;
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    try {
+        const user = await User.findOne({ username }).populate('referrals');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const referrals = user.referrals.map(ref => ({
+            username: ref.username,
+            coinBalance: ref.coinBalance
+        }));
+
+        const referralBonus = user.referrals.length * 50000; // 50,000 SFT for each referred friend
+        const miningRewards = referrals.reduce((acc, ref) => acc + ref.coinBalance * 0.2, 0); // 20% mining rewards
+        const totalEarnings = referralBonus + miningRewards;
+
+        res.status(200).json({ referrals, totalEarnings });
+    } catch (error) {
+        console.error('Error fetching referrals:', error);
+        res.status(500).json({ message: 'Error fetching referrals' });
+    }
 });
 
 app.use((err, req, res, next) => {
     console.error('Global error handler:', err);
     res.status(500).json({ message: 'Internal server error.' });
+});
+
+['friends', 'tasks', 'market', 'softie', 'more', 'upgrades', 'login', 'register', 'join-softcoin'].forEach(file => {
+    app.get(`/${file}`, (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', `${file}.html`));
+    });
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(port, () => {
