@@ -12,7 +12,7 @@
             font-family: 'Poppins', Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            text-align: center;
+            
             background-color: #fff;
         }
 
@@ -30,7 +30,11 @@
             font-size: 1em;
             margin-top: 5px;
             color: #888;
+            text-align: center;
             
+        }
+        .modal p {
+            text-align: left;
         }
 
         .earnings {
@@ -150,10 +154,12 @@
         </table>
     </div>
     <button class="button" id="invite-btn">Invite a Friend</button>
+    <div id="cherry-placeholder"></div>
+    <script src="cherry.js" defer></script>
     <div id="nav-placeholder"></div>
     <script src="navigation.js"></script>
     <script src="dark-mode.js"></script>
-  <!--  <script>
+    <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const username = localStorage.getItem('username'); // Get the username from local storage
 
@@ -223,6 +229,8 @@
         }, 3000);
     }
 });
-</script> -->
+</script>
+<script src="cherry.js"></script>
+
 </body>
 </html>

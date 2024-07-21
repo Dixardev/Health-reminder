@@ -15,6 +15,7 @@
     <link rel="icon" href="icons/softcoin.png" type="image/x-icon">
 </head>
 <body>
+
     <div id="top-bar">
         <div id="user-info">
             <img src="icons/softcoin.png" alt="Avatar" id="avatar">
@@ -62,13 +63,17 @@
     <p id="timer-text">Mining stops in: <span id="timer">00:00:00</span></p>
     <button id="mine-btn">Start Mining</button>
     
+
+
     <div id="nav-placeholder"></div>
     <div id="main-content"></div>
+    <div id="cherry-placeholder"></div>
+    <script src="cherry.js"></script>
 
     <script src="navigation.js" defer></script>
     <script src="dark-mode.js"></script>
-   <!--   <script src="script.js" defer></script>
-  <script defer>
+    <script src="script.js" defer></script>
+    <script defer>
         document.addEventListener("DOMContentLoaded", () => {
             // Check if username is stored in localStorage
             const username = localStorage.getItem('username');
@@ -83,7 +88,7 @@
 
             // Add any additional scripts here (if needed)
         });
-    </script> -->
+    </script>
     <script defer>
         function upgrades() {
             window.location.href = '/upgrades'; // Replace with your target URL
@@ -104,6 +109,9 @@
             slides[slideIndex-1].style.display = "block";  
             setTimeout(showSlides, 10000); // Change image every 3 seconds
         }
-    </script> 
+    </script>
+
+    
+
 </body>
 </html>
