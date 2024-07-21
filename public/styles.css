@@ -420,9 +420,14 @@ body.dark-mode #bottom-nav .nav-item.active span {
     left: 0;
     top: 0;
     width: 100%; 
-    height: auto; 
-    overflow: auto; 
+    height: auto;
+    overflow: auto;
+    background: rgba(51,49,48,0.76);
     
+}
+
+.cherry-modal {
+    color: #2C3A4D;
 }
 
 .cherry-modal-content {
@@ -431,7 +436,7 @@ body.dark-mode #bottom-nav .nav-item.active span {
     padding: 20px;
     border: 1px solid #888;
     width: 70%; 
-    max-width: 500px;
+    height: auto;
     border-radius: 30px;
     border-top-left-radius: 0;
     text-align: left;
@@ -460,6 +465,77 @@ body.dark-mode #bottom-nav .nav-item.active span {
 .cherry-close:hover,
 .cherry-close:focus {
     color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#no-thanks {
+   background-color: red;
+   margin: 10px;
+   padding: 10px;
+   border: none;
+   border-radius: 10px; 
+   color: white;
+   width: 120px;
+}
+#yes-please {
+  background-color: green;
+  margin: 10px;
+  padding: 10px;
+  border: none;
+  border-radius: 10px; 
+  color: white;
+  width: 120px;
+}
+#continue {
+  background-color: green;
+  margin: 10px;
+  padding: 10px;
+  border: none;
+  border-radius: 10px; 
+  color: white;
+  width: 120px;
+}
+#start {
+  background-color: green;
+  margin: 10px;
+  padding: 10px;
+  border: none;
+  border-radius: 10px; 
+  color: white;
+  width: 120px;
+}
+#end-tour {
+   background-color: red;
+   margin: 10px;
+   padding: 10px;
+   border: none;
+   border-radius: 10px; 
+   color: white;
+   width: 120px;
+}
+b {
+  font-size: 1.5em;
+}
+#learn-more,
+#read-whitepaper,
+#report-issue,
+#whats-new,
+#community {
+  background-color: green;
+  margin: 10px;
+  padding: 10px;
+  border: none;
+  border-radius: 10px; 
+  color: white;
+  width: 120px;
+}
+#learn-more:hover,
+#read-whitepaper:hover,
+#report-issue:hover,
+#whats-new:hover,
+#community:hover {
+    background: #0854087a;
     text-decoration: none;
     cursor: pointer;
 }

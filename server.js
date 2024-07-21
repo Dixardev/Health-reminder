@@ -4,7 +4,8 @@ const path = require('path');
 const cors = require('cors');
 const connectToDatabase = require('./utils/db');
 const User = require('./models/User');
-const auth = require('./routes/auth');
+const redisClient = require('./cache'); // Import Redis client
+const authRoutes = require('./routes/auth'); // Import authentication routes
 
 dotenv.config();
 
@@ -17,7 +18,62 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/api/auth', require('./routes/auth'));
+// Use authentication routes
+app.use('/api/auth', authRoutes);
+
+// Cache middleware
+const cache = async (req, res, next) => {
+    const { username } = req.body || req.params; // Use req.params for GET requests
+
+    if (!username) {
+        // If username is not defined, skip caching
+        return next();
+    }
+
+    try {
+        console.log('Checking cache for:', username); // Debugging
+        const cachedData = await redisClient.get(username);
+
+        if (cachedData) {
+            console.log('Cache hit:', username); // Debugging
+            return res.status(200).json(JSON.parse(cachedData));
+        }
+
+        console.log('Cache miss:', username); // Debugging
+        next();
+    } catch (error) {
+        console.error('Redis error:', error);
+        next();
+    }
+};
+
+// Apply cache middleware to referral endpoint
+app.get('/api/referrals/:username', cache, async (req, res) => {
+    const { username } = req.params;
+
+    try {
+        console.log('Fetching referrals for:', username); // Debugging
+        const user = await User.findOne({ username }).populate('referrals');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const referrals = user.referrals.map(ref => ({
+            username: ref.username,
+            coinBalance: ref.coinBalance
+        }));
+
+        const referralBonus = user.referrals.length * 50000; // 50,000 SFT for each referred friend
+        const miningRewards = referrals.reduce((acc, ref) => acc + ref.coinBalance * 0.2, 0); // 20% mining rewards
+        const totalEarnings = referralBonus + miningRewards;
+
+        const response = { referrals, totalEarnings };
+        await redisClient.set(username, JSON.stringify(response), 'EX', 60 * 60); // Cache for 1 hour
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error('Error fetching referrals:', error);
+        res.status(500).json({ message: 'Error fetching referrals' });
+    }
+});
 
 app.post('/api/startMining', async (req, res) => {
     const { username } = req.body;
@@ -56,29 +112,6 @@ app.post('/api/miningStatus', async (req, res) => {
         res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance });
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving mining status' });
-    }
-});
-
-app.get('/api/referrals/:username', async (req, res) => {
-    const { username } = req.params;
-
-    try {
-        const user = await User.findOne({ username }).populate('referrals');
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
-        const referrals = user.referrals.map(ref => ({
-            username: ref.username,
-            coinBalance: ref.coinBalance
-        }));
-
-        const referralBonus = user.referrals.length * 50000; // 50,000 SFT for each referred friend
-        const miningRewards = referrals.reduce((acc, ref) => acc + ref.coinBalance * 0.2, 0); // 20% mining rewards
-        const totalEarnings = referralBonus + miningRewards;
-
-        res.status(200).json({ referrals, totalEarnings });
-    } catch (error) {
-        console.error('Error fetching referrals:', error);
-        res.status(500).json({ message: 'Error fetching referrals' });
     }
 });
 

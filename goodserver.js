@@ -71,7 +71,9 @@ app.get('/api/referrals/:username', async (req, res) => {
             coinBalance: ref.coinBalance
         }));
 
-        const totalEarnings = referrals.reduce((acc, ref) => acc + ref.coinBalance * 0.2, 0); // Assuming 20% earnings
+        const referralBonus = user.referrals.length * 50000; // 50,000 SFT for each referred friend
+        const miningRewards = referrals.reduce((acc, ref) => acc + ref.coinBalance * 0.2, 0); // 20% mining rewards
+        const totalEarnings = referralBonus + miningRewards;
 
         res.status(200).json({ referrals, totalEarnings });
     } catch (error) {
