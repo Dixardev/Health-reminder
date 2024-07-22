@@ -86,7 +86,7 @@ app.post('/api/startMining', async (req, res) => {
         user.miningStartTime = new Date();
         await user.save();
 
-        res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance });
+        res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance, level: user.level });
     } catch (error) {
         res.status(500).json({ message: 'Error starting mining' });
     }
@@ -99,20 +99,42 @@ app.post('/api/miningStatus', async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const currentTime = Date.now();
-        const miningEndTime = new Date(user.miningStartTime).getTime() + (2 * 60 * 60 * 1000);
+        const rewardIntervals = [2 * 60 * 60 * 1000, 3 * 60 * 60 * 1000, 4 * 60 * 60 * 1000, 5 * 60 * 60 * 1000, 6 * 60 * 60 * 1000];
+        const rewards = [15000, 30000, 60000, 120000, 240000];
+        const miningEndTime = new Date(user.miningStartTime).getTime() + rewardIntervals[user.level - 1];
 
         if (user.isMining && currentTime >= miningEndTime) {
-            user.coinBalance += 15000;
+            user.coinBalance += rewards[user.level - 1];
             user.isMining = false;
             user.miningStartTime = null;
-            user.miningSessionCount += 1; // Increment the mining session count
+            user.miningSessionCount += 1;
             await user.save();
-            return res.status(200).json({ miningComplete: true, coinBalance: user.coinBalance, miningSessionCount: user.miningSessionCount });
+            return res.status(200).json({ miningComplete: true, coinBalance: user.coinBalance, miningSessionCount: user.miningSessionCount, level: user.level });
         }
 
-        res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance, miningSessionCount: user.miningSessionCount });
+        res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance, miningSessionCount: user.miningSessionCount, level: user.level });
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving mining status' });
+    }
+});
+
+app.post('/api/upgradeLevel', async (req, res) => {
+    const { username, level } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (level !== user.level + 1) return res.status(400).json({ message: 'Cannot skip levels' });
+
+        const upgradeCosts = [0, 100000, 500000, 2000000, 10000000];
+        if (user.coinBalance < upgradeCosts[level - 1]) return res.status(400).json({ message: 'Insufficient balance' });
+
+        user.coinBalance -= upgradeCosts[level - 1];
+        user.level = level;
+        await user.save();
+
+        res.status(200).json({ success: true, level: user.level, coinBalance: user.coinBalance });
+    } catch (error) {
+        res.status(500).json({ message: 'Error upgrading level' });
     }
 });
 

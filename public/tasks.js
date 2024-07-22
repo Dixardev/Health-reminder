@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     const tasks = [
-        { id: "follow-btn", text: "Follow Softcoin on X", reward: 30000, url: "https://twitter.com/softcoin" },
-        { id: "join-btn", text: "Join Telegram Channel", reward: 30000, url: "https://t.me/softcoin" },
+        { id: "follow-btn", text: "Follow Softcoin on X", reward: 30000, url: "https://twitter.com/softcoin__" },
+        { id: "join-btn", text: "Join Telegram Channel", reward: 30000, url: "https://t.me/softcoinupdates" },
         { id: "refer2-btn", text: "Refer 2 friends", reward: 30000, type: "count", count: 2 },
         { id: "refer5-btn", text: "Refer 5 friends", reward: 50000, type: "count", count: 5 },
         { id: "refer10-btn", text: "Refer 10 friends", reward: 100000, type: "count", count: 10 },

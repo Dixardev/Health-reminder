@@ -1,7 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
     let coinBalance = 0;
-    const totalCoins = 15000;
-    const rewardInterval = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+    let currentLevel = 1;
+    const rewardIntervals = [2 * 60 * 60 * 1000, 3 * 60 * 60 * 1000, 4 * 60 * 60 * 1000, 5 * 60 * 60 * 1000, 6 * 60 * 60 * 1000];
+    const rewards = [15000, 30000, 60000, 120000, 240000];
     let timerInterval;
 
     const username = localStorage.getItem('username');
@@ -11,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const coinBalanceEl = document.getElementById('coin-balance');
     const statusMessageEl = document.getElementById('status-message');
     const timerEl = document.getElementById('timer');
+    const miningLevelEl = document.getElementById('mining-level');
     const bars = document.querySelectorAll('.bar');
 
     // Function to start mining
@@ -23,12 +25,14 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await response.json();
             if (data.miningStartTime) {
-                startTimer(data.miningStartTime);
+                startTimer(data.miningStartTime, data.level);
                 mineBtn.disabled = true;
                 toggleBarsAnimation(true);
                 updateStatusMessage("Mining in progress...");
                 coinBalance = data.coinBalance;
+                currentLevel = data.level;
                 updateCoinBalance();
+                updateMiningLevel();
             } else {
                 updateStatusMessage(data.message || "Error starting mining");
             }
@@ -42,14 +46,19 @@ document.addEventListener("DOMContentLoaded", () => {
         coinBalanceEl.textContent = `${coinBalance.toLocaleString()} SFT`;
     }
 
+    // Function to update the mining level on the UI
+    function updateMiningLevel() {
+        miningLevelEl.textContent = currentLevel;
+    }
+
     // Function to update the status message on the UI
     function updateStatusMessage(message) {
         statusMessageEl.textContent = message;
     }
 
     // Function to start the timer for the next reward
-    function startTimer(miningStartTime) {
-        const endTime = new Date(miningStartTime).getTime() + rewardInterval;
+    function startTimer(miningStartTime, level) {
+        const endTime = new Date(miningStartTime).getTime() + rewardIntervals[level - 1];
 
         function updateTimer() {
             const remainingTime = endTime - Date.now();
@@ -66,8 +75,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 const seconds = Math.floor((remainingTime / 1000) % 60);
                 timerEl.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-                const elapsedTime = rewardInterval - remainingTime;
-                const coinsMined = Math.floor((elapsedTime / rewardInterval) * totalCoins);
+                const elapsedTime = rewardIntervals[level - 1] - remainingTime;
+                const coinsMined = Math.floor((elapsedTime / rewardIntervals[level - 1]) * rewards[level - 1]);
                 coinBalanceEl.textContent = `${(coinBalance + coinsMined).toLocaleString()} SFT`;
             }
         }
@@ -86,15 +95,19 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await response.json();
             if (data.miningStartTime) {
-                startTimer(data.miningStartTime);
+                startTimer(data.miningStartTime, data.level);
                 coinBalance = data.coinBalance;
+                currentLevel = data.level;
                 updateCoinBalance();
+                updateMiningLevel();
                 mineBtn.disabled = true;
                 toggleBarsAnimation(true);
                 updateStatusMessage("Mining in progress...");
             } else if (data.miningComplete) {
                 coinBalance = data.coinBalance;
+                currentLevel = data.level;
                 updateCoinBalance();
+                updateMiningLevel();
                 updateStatusMessage("Mining complete!");
                 mineBtn.disabled = false;
                 toggleBarsAnimation(false);

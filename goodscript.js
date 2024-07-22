@@ -59,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateStatusMessage("Mining complete!");
                 toggleBarsAnimation(false);
                 mineBtn.disabled = false;
+                updateCoinBalanceWithReferralEarnings(); // Update balance with referral earnings after mining complete
             } else {
                 const hours = Math.floor((remainingTime / (1000 * 60 * 60)) % 24);
                 const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
@@ -97,7 +98,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateStatusMessage("Mining complete!");
                 mineBtn.disabled = false;
                 toggleBarsAnimation(false);
+                updateCoinBalanceWithReferralEarnings(); // Update balance with referral earnings after mining complete
             } else {
+                coinBalance = data.coinBalance; // Make sure to set coinBalance even if mining not started
+                updateCoinBalance();
                 updateStatusMessage("Mining not started");
                 mineBtn.disabled = false;
                 toggleBarsAnimation(false);
@@ -114,9 +118,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Function to fetch and update balance with referral earnings
+    async function updateCoinBalanceWithReferralEarnings() {
+        try {
+            const response = await fetch(`/api/referrals/${username}`);
+            const data = await response.json();
+            coinBalance = data.totalEarnings;
+            updateCoinBalance();
+        } catch (error) {
+            updateStatusMessage("Failed to update balance with referral earnings");
+        }
+    }
+
     // Event listener for mining button
     mineBtn.addEventListener('click', startMining);
 
-    // Initial setup
+    // Initial setup: Update mining status and balance on page load
     updateMiningStatus();
 });

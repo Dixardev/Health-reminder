@@ -3,31 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tasks - SOFTCOIN</title>
+    <title>Softcoin Tasks</title>
     <link rel="stylesheet" href="styles.css">
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
+            background-color: #fff;
             color: #333;
             display: flex;
             flex-direction: column;
             align-items: center;
             overflow-y: auto;
             padding-bottom: 350px;
-            
         }
 
         #tasks-container {
-            background: #fff;
+            
             width: 90%;
             max-width: 600px;
             margin: 20px 0;
             padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding-top: 5px;
             border-radius: 8px;
+        }
+        body.dark-mode .tasks {
+            
+            color: #e0e0e0;
+        }
+        h1 {
+            text-align: center;
+            color: #2C3A4D;
+            font-size: 1.5em;
         }
 
         h1, h2 {
@@ -39,7 +47,7 @@
         .task {
             margin: 10px 0;
             padding: 10px;
-            background: #f9f9f9;
+            
             border: 1px solid #ddd;
             border-radius: 4px;
             display: flex;
@@ -48,14 +56,14 @@
         }
 
         .reward {
-            color: #007bff;
+            color: #268403;
             font-weight: bold;
             margin-top: 5px;
         }
 
         button {
             align-self: flex-end;
-            background: #007bff;
+            background: #268403;
             color: #fff;
             border: none;
             padding: 10px 15px;
@@ -70,14 +78,20 @@
         }
 
         button:hover:not(:disabled) {
-            background: #0056b3;
+            background: #268403;
+        }
+        #daily-check-in {
+            background: #70fbdc;
+        }
+        body.dark-mode #daily-check-in {
+            color: #2C3A4D;
         }
     </style>
 </head>
 <body>
     <!-- Other body elements -->
     <div id="tasks-container">
-        <h1>Tasks</h1>
+        <h1><b>Tasks</b></h1>
         <div id="daily-check-in" class="task">
             <span>Daily Check-In</span>
             <button id="daily-check-in-btn">Claim</button>

@@ -3,28 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coming Soon</title>
+    <title>Upgrade Mining Level</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-.coming-soon {
-    text-align: center;
-    margin-top: 80%;
+      body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 800px;
+    padding-top: 10px;
 }
 
-.coming-soon h1 {
-    font-size: 1em;
-    color: lightgrey;
+h1 {
+    margin-top: 20px;
 }
+
+#current-level {
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #016b02;
+}
+
+#upgrade-options {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.level-option {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    width: 80%;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.level-option h2 {
+    margin-bottom: 10px;
+}
+
+.level-option img {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 10px;
+}
+
+.level-option p {
+    margin-bottom: 10px;
+}
+
+h1 {
+    font-size: 1.5em;
+}
+
+.level-option button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: #fff;
+}
+
+.level-option button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
     </style>
 </head>
 <body>
-    <div class="coming-soon">
-        <h1>Coming Soon</h1>
+    <h1>Upgrade Your Mining Level</h1>
+    <p id="current-level">Current Level: 1</p>
+    <div id="upgrade-options">
+        <div class="level-option" data-level="1">
+            <h2>Level 1</h2>
+            <img src="iconns/slide2.png" alt="Level 1">
+            <p>Reward: 15,000 SFT in 2 hours</p>
+            <p>Default Level</p>
+            <button disabled>Default Level</button>
+        </div>
+        <div class="level-option" data-level="2">
+            <h2>Level 2</h2>
+            <img src="iconns/slide2.png" alt="Level 2">
+            <p>Reward: 30,000 SFT in 3 hours</p>
+            <p>Cost: 100,000 SFT</p>
+            <button onclick="upgradeLevel(2)">Upgrade to Level 2</button>
+        </div>
+        <div class="level-option" data-level="3">
+            <h2>Level 3</h2>
+            <img src="iconns/slide2.png" alt="Level 3">
+            <p>Reward: 60,000 SFT in 4 hours</p>
+            <p>Cost: 500,000 SFT</p>
+            <button onclick="upgradeLevel(3)">Upgrade to Level 3</button>
+        </div>
+        <div class="level-option" data-level="4">
+            <h2>Level 4</h2>
+            <img src="iconns/slide2.png" alt="Level 4">
+            <p>Reward: 120,000 SFT in 5 hours</p>
+            <p>Cost: 2,000,000 SFT</p>
+            <button onclick="upgradeLevel(4)">Upgrade to Level 4</button>
+        </div>
+        <div class="level-option" data-level="5">
+            <h2>Level 5</h2>
+            <img src="iconns/slide2.png" alt="Level 5">
+            <p>Reward: 240,000 SFT in 6 hours</p>
+            <p>Cost: 10,000,000 SFT</p>
+            <button onclick="upgradeLevel(5)">Upgrade to Level 5</button>
+        </div>
     </div>
-    <div id="cherry-placeholder"></div>
-    <script src="cherry.js" defer></script>
     <div id="nav-placeholder"></div>
-    <script src="navigation.js"></script>
-    <script src="dark-mode.js"></script>
+        <div id="cherry-placeholder"></div>
+        <script src="cherry.js"></script>
+        <script src="navigation.js" defer></script>
+        <script src="dark-mode.js"></script>
+    <script src="upgrade.js"></script>
 </body>
 </html>
