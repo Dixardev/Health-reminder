@@ -12,7 +12,8 @@ body {
     transition: background-color 0.3s, color 0.3s;
     justify-content: flex-start;
     overflow-y: auto;
-    padding-bottom: ;
+    padding-bottom: 50px;
+    font-size: 12px;
 }
 
 body.dark-mode {
@@ -42,10 +43,6 @@ body.dark-mode {
     margin-right: 10px;
 }
 
-#user-name {
-    font-size: 15px;
-}
-
 #controls {
     display: flex;
     align-items: center;
@@ -53,7 +50,6 @@ body.dark-mode {
 
 #upgrade-btn {
     padding: 10px 20px;
-    font-size: 15px;
     margin-left: 10px;
     background-color: #028900;
     color: white;
@@ -115,16 +111,19 @@ input:checked + .slider:before {
 #coin-balance {
     font-size: 30px;
     margin: 20px 5px 0;
-    color: #028900; /* Light theme color */
+    color: #2C3A4D; /* Light theme color */
     padding: 0;
 }
 
 body.dark-mode #coin-balance {
     color: white; /* Dark theme color */
 }
-
+#mine-btn #level {
+    text-align: right;
+    align-self: right;
+}
 #status-message {
-    font-size: 15px;
+    font-size: 12px;
     margin-bottom: 20px;
     margin: 0;
     padding: 0;
@@ -134,9 +133,9 @@ body.dark-mode #coin-balance {
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    height: 50px;
+    height: 60px;
     margin-bottom: 20px;
-    width: 70%;
+    width: 40%;
     padding: 3.3em;
     padding-top: 5em;
     padding-bottom: 1em;
@@ -144,9 +143,9 @@ body.dark-mode #coin-balance {
 
 .bar {
     width: 5%;
-    height: 30px;
+    height: 20px;
     background-color: #000;
-    margin: 0 5px;
+    margin: 0 2px;
     animation: soundWave 2s infinite;
     transform-origin: bottom;
 }
@@ -172,17 +171,24 @@ body.dark-mode #coin-balance {
 
 #mine-btn {
     padding: 15px 30px;
-    font-size: 20px;
+    font-size: 15px;
+    text-align: center;
     background-color: #028900;
     color: white;
     border: none;
+    width: 80%;
     border-radius: 5px;
+    display: flex;
+    justify-content: space between;
+    gap: 20px;
     cursor: pointer;
     margin-bottom: 60px; /* Adjust this value if needed */
     position: relative;
     overflow: hidden;
 }
-
+#buzz {
+  height: 18px;
+}
 #mine-btn:disabled {
     background-color: #ccc;
     cursor: not-allowed;
@@ -231,9 +237,11 @@ body.dark-mode .bar:nth-child(1) { background-color: #e74c3c; animation-delay: 0
 #timer {
   padding-bottom: 0;
   color: #028900;
-  font-size: 15px;
+  font-size: 12px;
 }
-
+#timer-text {
+  font-size: 12px;
+}
 p {
   font-size: 15px;
 }
@@ -246,10 +254,10 @@ p {
   padding: 10px 0;
   display: flex;
   justify-content: space-around;
-  background: rgba(3,9,19,0.8);
+  background: white;
   backdrop-filter: blur(50px);
-  border-top-left-radius: 50px;
-  border-top-right-radius: 50px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
   box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
   z-index: 1000;
 }
@@ -274,7 +282,7 @@ p {
 
 #bottom-nav .nav-item span {
   display: block;
-  font-size: 10px;
+  font-size: 9px;
   color: lightgray;
 }
 
@@ -290,8 +298,8 @@ p {
 body.dark-mode #bottom-nav {
   background: rgba(44, 58, 77, 0.8);
   backdrop-filter: blur(10px);
-  border-top-left-radius: 50px;
-  border-top-right-radius: 50px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
   border-top: 1px solid #444;
 }
 
@@ -356,7 +364,7 @@ body.dark-mode #bottom-nav .nav-item.active span {
 /* Styles for Cherry System */
 #cherry-system {
     position: fixed;
-    top: 20px;
+    top: 18px;
     left: 15px;
     width: 40px;
     height: 40px;
@@ -422,12 +430,14 @@ body.dark-mode #bottom-nav .nav-item.active span {
     width: 100%; 
     height: auto;
     overflow: auto;
-    background: rgba(51,49,48,0.76);
+    padding-bottom: 0;
+    
     
 }
 
 .cherry-modal {
     color: #2C3A4D;
+    font-size: 10px;
 }
 
 .cherry-modal-content {
@@ -443,7 +453,17 @@ body.dark-mode #bottom-nav .nav-item.active span {
     transform: scale(0);
     animation: spreadOut 0.8s forwards; /* Add animation */
 }
+#cherry-message p, #cherry-message button {
+    font-size: 10px;
+}
 
+#cherry-message {
+    font-size: 12px;
+}
+#cherry-message button {
+    margin-top: 30px;
+    margin-bottom: 0;
+}
 @keyframes spreadOut {
     0% {
         transform: scale(0);
@@ -458,7 +478,7 @@ body.dark-mode #bottom-nav .nav-item.active span {
 .cherry-close {
     color: #aaa;
     float: right;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: bold;
 }
 
@@ -470,49 +490,49 @@ body.dark-mode #bottom-nav .nav-item.active span {
 }
 
 #no-thanks {
-   background-color: red;
-   margin: 10px;
-   padding: 10px;
+   background-color: gray;
+   margin: 5px;
+   padding: 5px;
    border: none;
    border-radius: 10px; 
    color: white;
-   width: 120px;
+   width: 100px;
 }
 #yes-please {
   background-color: green;
-  margin: 10px;
-  padding: 10px;
+  margin: 5px;
+  padding: 5px;
   border: none;
   border-radius: 10px; 
   color: white;
-  width: 120px;
+  width: 100px;
 }
 #continue {
   background-color: green;
-  margin: 10px;
-  padding: 10px;
+  margin: 5px;
+  padding: 5px;
   border: none;
   border-radius: 10px; 
   color: white;
-  width: 120px;
+  width: 100px;
 }
 #start {
   background-color: green;
-  margin: 10px;
-  padding: 10px;
+  margin: 5px;
+  padding: 5px;
   border: none;
   border-radius: 10px; 
   color: white;
-  width: 120px;
+  width: 100px;
 }
 #end-tour {
-   background-color: red;
-   margin: 10px;
-   padding: 10px;
+   background-color: gray;
+   margin: 5px;
+   padding: 5px;
    border: none;
    border-radius: 10px; 
    color: white;
-   width: 120px;
+   width: 100px;
 }
 b {
   font-size: 1.5em;
@@ -523,12 +543,12 @@ b {
 #whats-new,
 #community {
   background-color: green;
-  margin: 10px;
-  padding: 10px;
+  margin: 5px;
+  padding: 5px;
   border: none;
   border-radius: 10px; 
   color: white;
-  width: 120px;
+  width: 100px;
 }
 #learn-more:hover,
 #read-whitepaper:hover,

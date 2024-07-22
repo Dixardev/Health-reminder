@@ -3,30 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coming Soon</title>
+    <title>Tasks - SOFTCOIN</title>
     <link rel="stylesheet" href="styles.css">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1069924523331145"
-     crossorigin="anonymous"></script>
     <style>
-.coming-soon {
-    text-align: center;
-    margin-top: 80%;
-}
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+            padding-bottom: 350px;
+            
+        }
 
-.coming-soon h1 {
-    font-size: 1em;
-    color: lightgrey;
-}
+        #tasks-container {
+            background: #fff;
+            width: 90%;
+            max-width: 600px;
+            margin: 20px 0;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1, h2 {
+            margin: 0 0 20px 0;
+            font-weight: normal;
+            color: #444;
+        }
+
+        .task {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .reward {
+            color: #007bff;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        button {
+            align-self: flex-end;
+            background: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background: #0056b3;
+        }
     </style>
 </head>
 <body>
-    <div class="coming-soon">
-        <h1>Coming Soon</h1>
+    <!-- Other body elements -->
+    <div id="tasks-container">
+        <h1>Tasks</h1>
+        <div id="daily-check-in" class="task">
+            <span>Daily Check-In</span>
+            <button id="daily-check-in-btn">Claim</button>
+        </div>
+        <div class="task">
+            <span>Follow Softcoin on X</span>
+            <span class="reward">30,000 SFT</span>
+            <button id="follow-btn">Follow</button>
+        </div>
+        <div class="task">
+            <span>Join Telegram Channel</span>
+            <span class="reward">30,000 SFT</span>
+            <button id="join-btn">Join</button>
+        </div>
+        <div class="task">
+            <span>Refer 2 friends</span>
+            <span class="reward">30,000 SFT</span>
+            <button id="refer2-btn" disabled>0/2</button>
+        </div>
+        <div class="task">
+            <span>Refer 5 friends</span>
+            <span class="reward">50,000 SFT</span>
+            <button id="refer5-btn" disabled>0/5</button>
+        </div>
+        <div class="task">
+            <span>Refer 10 friends</span>
+            <span class="reward">100,000 SFT</span>
+            <button id="refer10-btn" disabled>0/10</button>
+        </div>
+        <div class="task">
+            <span>Complete 2 mining sessions</span>
+            <span class="reward">10,000 SFT</span>
+            <button id="mine2-btn" disabled>0/2</button>
+        </div>
+        <div class="task">
+            <span>Complete 20 mining sessions</span>
+            <span class="reward">100,000 SFT</span>
+            <button id="mine20-btn" disabled>0/20</button>
+        </div>
+        <div class="task">
+            <span>Complete 100 mining sessions</span>
+            <span class="reward">1,000,000 SFT</span>
+            <button id="mine100-btn" disabled>0/100</button>
+        </div>
+        <div id="nav-placeholder"></div>
+        <div id="cherry-placeholder"></div>
+        <script src="cherry.js"></script>
+        <script src="navigation.js" defer></script>
+        <script src="dark-mode.js"></script>
+        <script src="tasks.js"></script>
     </div>
-    <div id="cherry-placeholder"></div>
-    <script src="cherry.js" defer></script>
-    <div id="nav-placeholder"></div>
-    <script src="navigation.js"></script>
-    <script src="dark-mode.js"></script>
 </body>
 </html>

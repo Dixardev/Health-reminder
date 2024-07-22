@@ -10,7 +10,10 @@ const userSchema = new mongoose.Schema({
     miningStartTime: { type: Date, default: null },
     referralUsername: { type: String, default: '' },
     referrals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    completedTasks: [{ type: Number }],
+    lastCheckInDate: { type: Date },
+    miningSessionCount: { type: Number, default: 0 } // Add this field
 });
 
 const User = mongoose.model('User', userSchema);

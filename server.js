@@ -105,13 +105,67 @@ app.post('/api/miningStatus', async (req, res) => {
             user.coinBalance += 15000;
             user.isMining = false;
             user.miningStartTime = null;
+            user.miningSessionCount += 1; // Increment the mining session count
             await user.save();
-            return res.status(200).json({ miningComplete: true, coinBalance: user.coinBalance });
+            return res.status(200).json({ miningComplete: true, coinBalance: user.coinBalance, miningSessionCount: user.miningSessionCount });
         }
 
-        res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance });
+        res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance, miningSessionCount: user.miningSessionCount });
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving mining status' });
+    }
+});
+
+app.get('/api/miningSessionCount/:username', async (req, res) => {
+    const { username } = req.params;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        res.status(200).json({ miningSessionCount: user.miningSessionCount });
+    } catch (error) {
+        res.status(500).json({ message: 'Error retrieving mining session count' });
+    }
+});
+
+// Endpoint to claim task reward
+app.post('/api/claimTaskReward', async (req, res) => {
+    const { username, taskId, reward } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Check if the task is already completed
+        if (user.completedTasks && user.completedTasks.includes(taskId)) {
+            return res.status(400).json({ message: 'Task already completed' });
+        }
+
+        // Add the reward to the user's balance
+        user.coinBalance += reward;
+        user.completedTasks = user.completedTasks || [];
+        user.completedTasks.push(taskId);
+        await user.save();
+
+        res.status(200).json({ success: true, newBalance: user.coinBalance });
+    } catch (error) {
+        res.status(500).json({ message: 'Error claiming task reward' });
+    }
+});
+
+// Endpoint to claim daily check-in bonus
+app.post('/api/claimCheckInBonus', async (req, res) => {
+    const { username, reward } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Add the reward to the user's balance
+        user.coinBalance += reward;
+        await user.save();
+
+        res.status(200).json({ success: true, newBalance: user.coinBalance });
+    } catch (error) {
+        res.status(500).json({ message: 'Error claiming daily check-in bonus' });
     }
 });
 

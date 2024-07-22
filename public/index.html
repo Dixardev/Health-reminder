@@ -13,6 +13,11 @@
     <meta name="keywords" content="Softcoin, cryptocurrency, mining">
     <meta name="author" content="SoftCoin">
     <link rel="icon" href="icons/softcoin.png" type="image/x-icon">
+    <style>
+        body {
+          overflow-y: hidden;
+        }
+    </style>
 </head>
 <body>
 
@@ -61,15 +66,13 @@
         <div class="bar"></div>
     </div>
     <p id="timer-text">Mining stops in: <span id="timer">00:00:00</span></p>
-    <button id="mine-btn">Start Mining</button>
+    <button id="mine-btn">Start Mining<span id="level">Level: <span id="mining-level">1</span></span></button>
     
 
 
     <div id="nav-placeholder"></div>
-    <div id="main-content"></div>
     <div id="cherry-placeholder"></div>
     <script src="cherry.js"></script>
-    <script src="cherry-assist.js"></script>
 
     <script src="navigation.js" defer></script>
     <script src="dark-mode.js"></script>
