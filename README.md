@@ -18,7 +18,7 @@
 ### 功能详情 (Features)
 | 新增自定义任务 | 智能提醒 |
 | :---: | :---: |
-| ![Tasks](./docs/screenshots/tasks.png) | ![Notification](./docs/screenshots/notification.png) |
+| ![Tasks](./docs/screenshots/tasks.png) | ![Notification](./docs/screenshots/弹窗提醒.png) |
 
 ---
 
