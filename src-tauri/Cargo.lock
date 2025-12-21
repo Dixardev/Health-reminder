@@ -673,7 +673,7 @@ dependencies = [
 
 [[package]]
 name = "desk-reminder"
-version = "1.0.0"
+version = "1.4.0"
 dependencies = [
  "dirs 5.0.1",
  "serde",

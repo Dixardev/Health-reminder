@@ -13,10 +13,20 @@
 ## 视觉呈现
 
 ### 核心看板 (Dashboard) & 自定义任务排程 (Tasks)
-![Dashboard](./docs/screenshots/展示1.png) ![Tasks](./docs/screenshots/展示2.png)
+
+<p align="center">
+  <img src="./docs/screenshots/展示1.png" alt="Dashboard" width="30%">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="./docs/screenshots/展示2.png" alt="Tasks" width="30%">
+</p>
 
 ### 提醒与弹窗 (Notifications)
-![In-app](./docs/screenshots/notification.png) ![System](./docs/screenshots/弹窗提醒.png)
+
+<p align="center">
+  <img src="./docs/screenshots/notification.png" alt="In-app notification" width="30%">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="./docs/screenshots/弹窗提醒.png" alt="System notification" width="48%">
+</p>
 
 ---
 
