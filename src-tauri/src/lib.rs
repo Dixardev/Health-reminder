@@ -1,0 +1,127 @@
+use std::fs;
+use std::path::PathBuf;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager, WindowEvent,
+};
+
+fn get_settings_path() -> PathBuf {
+    let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+    config_dir.join("desk-reminder").join("settings.json")
+}
+
+#[tauri::command]
+fn load_settings() -> String {
+    let path = get_settings_path();
+    fs::read_to_string(path).unwrap_or_default()
+}
+
+#[tauri::command]
+fn save_settings(settings: String) -> Result<(), String> {
+    let path = get_settings_path();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::write(path, settings).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_autostart(enabled: bool) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        let exe_path = std::env::current_exe().map_err(|e| e.to_string())?;
+        let key_path = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+        
+        if enabled {
+            Command::new("reg")
+                .args(["add", key_path, "/v", "DeskReminder", "/t", "REG_SZ", "/d", exe_path.to_str().unwrap(), "/f"])
+                .output()
+                .map_err(|e| e.to_string())?;
+        } else {
+            Command::new("reg")
+                .args(["delete", key_path, "/v", "DeskReminder", "/f"])
+                .output()
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn play_notification_sound() {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        let _ = Command::new("powershell")
+            .args(["-Command", "[console]::beep(800,200)"])
+            .spawn();
+    }
+}
+
+#[tauri::command]
+fn show_main_window(window: tauri::Window) {
+    let _ = window.show();
+    let _ = window.set_focus();
+}
+
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![
+            load_settings,
+            save_settings,
+            set_autostart,
+            play_notification_sound,
+            show_main_window,
+        ])
+        .setup(|app| {
+            let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "显示主窗口", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show, &quit])?;
+            
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .tooltip("健康提醒助手")
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+            
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
