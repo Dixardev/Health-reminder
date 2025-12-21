@@ -70,9 +70,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Health Reminder v${{ github.ref_name }}'
+          releaseName: 'Health Reminder ${{ github.ref_name }}'
           releaseBody: |
-            ## 健康提醒助手 v${{ github.ref_name }}
+            ## 健康提醒助手 ${{ github.ref_name }}
             
             ### 🛠️ 跨平台支持
             - **Windows**: 提供 NSIS (.exe) 安装包。
