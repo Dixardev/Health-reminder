@@ -1,28 +1,33 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { requestPermission } from '@tauri-apps/plugin-notification';
 
-const DEFAULT_SETTINGS = {
-  sitInterval: 45,
-  waterInterval: 60,
-  eyeInterval: 20,
-  sitEnabled: true,
-  waterEnabled: true,
-  eyeEnabled: true,
+const ICONS = {
+  sit: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>`,
+  water: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.32 0L12 2.69z"></path></svg>`,
+  eye: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+  work: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
+  pause: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`,
+  play: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`,
+  reset: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>`,
+  plus: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+  trash: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+  bell: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`
+};
+
+const DEFAULT_TASKS = [
+  { id: 'sit', title: '久坐提醒', desc: '该起来活动了，走动一下吧~', interval: 45, enabled: true, icon: 'sit' },
+  { id: 'water', title: '喝水提醒', desc: '该喝口水了，保持水分充足~', interval: 60, enabled: true, icon: 'water' },
+  { id: 'eye', title: '护眼提醒', desc: '让眼睛休息一下，看看远处~', interval: 20, enabled: true, icon: 'eye' }
+];
+
+let settings = {
+  tasks: [...DEFAULT_TASKS],
   soundEnabled: true,
   autoStart: false,
 };
 
-let settings = { ...DEFAULT_SETTINGS };
-let timers = {
-  sit: null,
-  water: null,
-  eye: null,
-};
-let countdowns = {
-  sit: 0,
-  water: 0,
-  eye: 0,
-};
+let countdowns = {};
 let stats = {
   sitBreaks: 0,
   waterCups: 0,
@@ -30,37 +35,58 @@ let stats = {
 };
 let isPaused = false;
 let workStartTime = Date.now();
+let activePopup = null; 
+
+async function init() {
+  await loadSettings();
+  
+  settings.tasks.forEach(task => {
+    if (countdowns[task.id] === undefined) {
+      countdowns[task.id] = task.interval * 60;
+    }
+  });
+
+  // 必须在初始化时请求通知权限，否则会被系统拦截
+  try {
+    let permission = await requestPermission();
+    if (permission !== 'granted') {
+      console.warn('Notification permission not granted');
+    }
+  } catch (e) {
+    console.error('Failed to request permission', e);
+  }
+
+  renderFullUI(); 
+  
+  setInterval(tick, 1000);
+  
+  listen('show-window', () => {
+    invoke('show_main_window');
+  });
+}
 
 async function loadSettings() {
   try {
     const saved = await invoke('load_settings');
     if (saved) {
-      settings = { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+      const parsed = JSON.parse(saved);
+      settings = { ...settings, ...parsed };
     }
   } catch (e) {
     console.log('Using default settings');
   }
   
-  try {
-    const savedStats = localStorage.getItem('reminder_stats');
-    if (savedStats) {
-      const parsed = JSON.parse(savedStats);
-      const today = new Date().toDateString();
-      if (parsed.date === today) {
-        stats = parsed.stats;
-      }
+  const savedStats = localStorage.getItem('reminder_stats');
+  if (savedStats) {
+    const parsed = JSON.parse(savedStats);
+    if (parsed.date === new Date().toDateString()) {
+      stats = parsed.stats;
     }
-  } catch (e) {
-    console.log('Using default stats');
   }
 }
 
 async function saveSettings() {
-  try {
-    await invoke('save_settings', { settings: JSON.stringify(settings) });
-  } catch (e) {
-    console.log('Failed to save settings');
-  }
+  await invoke('save_settings', { settings: JSON.stringify(settings) });
 }
 
 function saveStats() {
@@ -70,305 +96,310 @@ function saveStats() {
   }));
 }
 
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return { mins, secs };
-}
-
-function getNextReminder() {
-  let next = null;
-  let type = '';
-  
-  if (settings.sitEnabled && countdowns.sit > 0) {
-    if (!next || countdowns.sit < next) {
-      next = countdowns.sit;
-      type = 'sit';
-    }
-  }
-  if (settings.waterEnabled && countdowns.water > 0) {
-    if (!next || countdowns.water < next) {
-      next = countdowns.water;
-      type = 'water';
-    }
-  }
-  if (settings.eyeEnabled && countdowns.eye > 0) {
-    if (!next || countdowns.eye < next) {
-      next = countdowns.eye;
-      type = 'eye';
-    }
-  }
-  
-  return { time: next || 0, type };
-}
-
-function showNotification(type) {
-  const notifications = {
-    sit: { emoji: '🧘', title: '该起来活动了！', desc: '久坐对身体不好，起来走动一下吧~' },
-    water: { emoji: '💧', title: '该喝水了！', desc: '保持水分摄入，让身体更健康~' },
-    eye: { emoji: '👀', title: '让眼睛休息一下！', desc: '看看远处，放松一下眼睛~' },
-  };
-  
-  const n = notifications[type];
-  const popup = document.querySelector('.notification-popup');
-  const content = popup.querySelector('.notification-content');
-  
-  content.querySelector('.emoji').textContent = n.emoji;
-  content.querySelector('h2').textContent = n.title;
-  content.querySelector('p').textContent = n.desc;
-  
-  popup.classList.add('show');
-  
-  if (settings.soundEnabled) {
-    try {
-      invoke('play_notification_sound');
-    } catch (e) {
-      console.log('Sound not available');
-    }
-  }
-}
-
-function dismissNotification(type) {
-  const popup = document.querySelector('.notification-popup');
-  popup.classList.remove('show');
-  
-  if (type === 'sit') {
-    stats.sitBreaks++;
-    countdowns.sit = settings.sitInterval * 60;
-  } else if (type === 'water') {
-    stats.waterCups++;
-    countdowns.water = settings.waterInterval * 60;
-  } else if (type === 'eye') {
-    countdowns.eye = settings.eyeInterval * 60;
-  }
-  
-  saveStats();
-  render();
-}
-
 function tick() {
   if (isPaused) return;
   
   stats.workMinutes = Math.floor((Date.now() - workStartTime) / 60000);
   
-  if (settings.sitEnabled && countdowns.sit > 0) {
-    countdowns.sit--;
-    if (countdowns.sit === 0) {
-      showNotification('sit');
+  settings.tasks.forEach(task => {
+    if (task.enabled && countdowns[task.id] > 0) {
+      countdowns[task.id]--;
+      if (countdowns[task.id] === 0) {
+        triggerNotification(task);
+      }
     }
-  }
+  });
   
-  if (settings.waterEnabled && countdowns.water > 0) {
-    countdowns.water--;
-    if (countdowns.water === 0) {
-      showNotification('water');
-    }
-  }
-  
-  if (settings.eyeEnabled && countdowns.eye > 0) {
-    countdowns.eye--;
-    if (countdowns.eye === 0) {
-      showNotification('eye');
-    }
-  }
-  
-  render();
+  updateLiveValues(); // 仅更新数值，不刷新 DOM 结构
 }
 
-function toggleReminder(type) {
-  settings[`${type}Enabled`] = !settings[`${type}Enabled`];
-  if (settings[`${type}Enabled`]) {
-    countdowns[type] = settings[`${type}Interval`] * 60;
+async function triggerNotification(task) {
+  activePopup = { ...task };
+  if (settings.soundEnabled) {
+    invoke('play_notification_sound').catch(() => {});
   }
-  saveSettings();
-  render();
+  invoke('show_notification', { title: task.title, body: task.desc }).catch(console.error);
+  renderFullUI(); 
 }
 
-function updateInterval(type, value) {
-  const val = parseInt(value) || 1;
-  settings[`${type}Interval`] = Math.max(1, Math.min(180, val));
-  countdowns[type] = settings[`${type}Interval`] * 60;
+function dismissNotification() {
+  if (!activePopup) return;
+  const id = activePopup.id;
+  if (id === 'sit') stats.sitBreaks++;
+  if (id === 'water') stats.waterCups++;
+  const task = settings.tasks.find(t => t.id === id);
+  if (task) countdowns[id] = task.interval * 60;
+  activePopup = null;
+  saveStats();
+  renderFullUI();
+}
+
+function addTask() {
+  const id = 'task_' + Date.now();
+  settings.tasks.push({
+    id: id, title: '新提醒', desc: '又是充满活力的一天，记得休息哦~',
+    interval: 30, enabled: true, icon: 'bell'
+  });
+  countdowns[id] = 30 * 60;
   saveSettings();
-  render();
+  renderFullUI();
+}
+
+function removeTask(id) {
+  settings.tasks = settings.tasks.filter(t => t.id !== id);
+  delete countdowns[id];
+  saveSettings();
+  renderFullUI();
+}
+
+function updateTask(id, updates) {
+  const task = settings.tasks.find(t => t.id === id);
+  if (task) {
+    Object.assign(task, updates);
+    if (updates.interval !== undefined) {
+      countdowns[id] = task.interval * 60;
+    }
+    saveSettings();
+    // 这里不调用 renderFullUI，由 updateLiveValues 或特定的局部更新处理
+  }
 }
 
 function togglePause() {
   isPaused = !isPaused;
-  render();
+  renderFullUI();
 }
 
 function resetAll() {
-  countdowns.sit = settings.sitInterval * 60;
-  countdowns.water = settings.waterInterval * 60;
-  countdowns.eye = settings.eyeInterval * 60;
+  settings.tasks.forEach(task => {
+    countdowns[task.id] = task.interval * 60;
+  });
   isPaused = false;
-  render();
+  renderFullUI();
 }
 
-function toggleSetting(key) {
-  settings[key] = !settings[key];
-  saveSettings();
-  
-  if (key === 'autoStart') {
-    invoke('set_autostart', { enabled: settings.autoStart }).catch(() => {});
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+// 核心改进：仅更新数值
+function updateLiveValues() {
+  // 更新统计数据
+  const statsElements = document.querySelectorAll('.status-item .value');
+  if (statsElements[0]) statsElements[0].innerText = stats.sitBreaks;
+  if (statsElements[1]) statsElements[1].innerText = stats.waterCups;
+  if (statsElements[2]) statsElements[2].innerText = stats.workMinutes;
+
+  // 更新主倒计时
+  let nextTask = null;
+  let minTime = Infinity;
+  settings.tasks.forEach(t => {
+    if (t.enabled && countdowns[t.id] < minTime) {
+      minTime = countdowns[t.id];
+      nextTask = t;
+    }
+  });
+
+  const timerText = document.querySelector('.time-text');
+  if (timerText) {
+    const timeStr = nextTask ? formatTime(countdowns[nextTask.id]) : '--:--';
+    timerText.querySelector('.minutes').innerText = timeStr.split(':')[0];
+    timerText.querySelector('.seconds').innerText = ':' + timeStr.split(':')[1];
   }
-  
-  render();
+
+  const timerLabel = document.querySelector('.timer-label');
+  if (timerLabel) {
+    timerLabel.innerText = (nextTask ? nextTask.title : '无活动任务') + (isPaused ? ' (已暂停)' : '');
+  }
+
+  const mainRing = document.querySelector('.timer-ring .progress');
+  if (mainRing && nextTask) {
+    const total = nextTask.interval * 60;
+    const offset = 502 * (1 - countdowns[nextTask.id] / total);
+    mainRing.style.strokeDashoffset = offset;
+  }
+
+  // 更新任务卡片中的微缩进度条和剩余时间文字
+  settings.tasks.forEach(task => {
+    const card = document.querySelector(`.reminder-card[data-id="${task.id}"]`);
+    if (card) {
+      const current = countdowns[task.id] || 0;
+      const total = task.interval * 60;
+      const offset = 113 * (1 - current / total);
+      card.querySelector('.progress-mini .progress').style.strokeDashoffset = offset;
+      
+      const timeDisplay = card.querySelector('.time-remaining');
+      if (timeDisplay) timeDisplay.innerText = `(${formatTime(current)})`;
+    }
+  });
 }
 
-function render() {
-  const next = getNextReminder();
-  const { mins, secs } = formatTime(next.time);
-  const totalSeconds = next.type ? settings[`${next.type}Interval`] * 60 : 1;
-  const progress = next.time / totalSeconds;
-  const circumference = 2 * Math.PI * 80;
-  const offset = circumference * (1 - progress);
-  
-  const typeLabels = {
-    sit: '久坐提醒',
-    water: '喝水提醒',
-    eye: '护眼提醒',
-    '': '无活动提醒',
-  };
+function renderFullUI() {
+  const app = document.getElementById('app');
+  let nextTask = null;
+  let minTime = Infinity;
+  settings.tasks.forEach(t => {
+    if (t.enabled && countdowns[t.id] < minTime) {
+      minTime = countdowns[t.id];
+      nextTask = t;
+    }
+  });
 
-  document.getElementById('app').innerHTML = `
+  app.innerHTML = `
     <div class="header">
       <h1>健康提醒助手</h1>
       <p>关爱健康，从每一次提醒开始</p>
     </div>
 
     <div class="status-bar">
-      <div class="status-item">
-        <div class="icon">🧘</div>
-        <div class="value">${stats.sitBreaks}</div>
-        <div class="label">休息次数</div>
-      </div>
-      <div class="status-item">
-        <div class="icon">💧</div>
-        <div class="value">${stats.waterCups}</div>
-        <div class="label">喝水次数</div>
-      </div>
-      <div class="status-item">
-        <div class="icon">⏱️</div>
-        <div class="value">${stats.workMinutes}</div>
-        <div class="label">工作分钟</div>
-      </div>
+      <div class="status-item"><div class="icon">${ICONS.sit}</div><div class="value">${stats.sitBreaks}</div><div class="label">休息次数</div></div>
+      <div class="status-item"><div class="icon">${ICONS.water}</div><div class="value">${stats.waterCups}</div><div class="label">喝水次数</div></div>
+      <div class="status-item"><div class="icon">${ICONS.work}</div><div class="value">${stats.workMinutes}</div><div class="label">工作分钟</div></div>
     </div>
 
     <div class="timer-display">
       <div class="timer-ring">
-        <svg width="180" height="180" viewBox="0 0 180 180">
-          <circle class="bg" cx="90" cy="90" r="80" />
-          <circle class="progress" cx="90" cy="90" r="80"
-            stroke-dasharray="${circumference}"
-            stroke-dashoffset="${offset}" />
-        </svg>
-        <div class="time-text">
-          <div class="minutes">${String(mins).padStart(2, '0')}</div>
-          <div class="seconds">:${String(secs).padStart(2, '0')}</div>
-        </div>
+        <svg width="180" height="180" viewBox="0 0 180 180"><circle class="bg" cx="90" cy="90" r="80" /><circle class="progress" cx="90" cy="90" r="80" stroke-dasharray="502" stroke-dashoffset="502" /></svg>
+        <div class="time-text"><div class="minutes">00</div><div class="seconds">:00</div></div>
       </div>
-      <div class="timer-label">${typeLabels[next.type]}${isPaused ? ' (已暂停)' : ''}</div>
+      <div class="timer-label">正在加载...</div>
     </div>
 
     <div class="reminder-cards">
-      <div class="reminder-card">
-        <div class="icon">🧘</div>
-        <div class="info">
-          <div class="title">久坐提醒</div>
-          <div class="desc">每 <input type="number" class="interval-input" value="${settings.sitInterval}" data-type="sit" min="1" max="180"> 分钟</div>
+      ${settings.tasks.map(task => `
+        <div class="reminder-card" data-id="${task.id}">
+          <div class="progress-mini" style="cursor:pointer;" title="点击重置" data-reset-id="${task.id}">
+            <svg width="40" height="40" viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="18" /><circle class="progress" cx="20" cy="20" r="18" stroke-dasharray="113" stroke-dashoffset="113" /></svg>
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:var(--primary); pointer-events:none;">${ICONS[task.icon] || ICONS.bell}</div>
+          </div>
+          <div class="info">
+            <div class="title" contenteditable="true" data-id="${task.id}">${task.title}</div>
+            <div class="interval-controls">
+              <div class="input-group">
+                <input type="number" class="interval-input" value="${task.interval}" data-id="${task.id}" min="1" max="1440">
+                <span style="font-size:0.8rem; color:var(--text-muted)">分钟 <span class="time-remaining"></span></span>
+              </div>
+              <div class="presets">
+                <button class="preset-btn" data-id="${task.id}" data-val="15">15m</button><button class="preset-btn" data-id="${task.id}" data-val="30">30m</button>
+                <button class="preset-btn" data-id="${task.id}" data-val="45">45m</button><button class="preset-btn" data-id="${task.id}" data-val="60">60m</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+            <div class="toggle ${task.enabled ? 'active' : ''}" data-toggle-id="${task.id}"></div>
+            ${!['sit', 'water', 'eye'].includes(task.id) ? `<div class="remove-btn" data-id="${task.id}" style="color:var(--danger); cursor:pointer;">${ICONS.trash}</div>` : ''}
+          </div>
         </div>
-        <div class="toggle ${settings.sitEnabled ? 'active' : ''}" data-toggle="sit"></div>
-      </div>
-      
-      <div class="reminder-card">
-        <div class="icon">💧</div>
-        <div class="info">
-          <div class="title">喝水提醒</div>
-          <div class="desc">每 <input type="number" class="interval-input" value="${settings.waterInterval}" data-type="water" min="1" max="180"> 分钟</div>
-        </div>
-        <div class="toggle ${settings.waterEnabled ? 'active' : ''}" data-toggle="water"></div>
-      </div>
-      
-      <div class="reminder-card">
-        <div class="icon">👀</div>
-        <div class="info">
-          <div class="title">护眼提醒</div>
-          <div class="desc">每 <input type="number" class="interval-input" value="${settings.eyeInterval}" data-type="eye" min="1" max="180"> 分钟</div>
-        </div>
-        <div class="toggle ${settings.eyeEnabled ? 'active' : ''}" data-toggle="eye"></div>
-      </div>
+      `).join('')}
     </div>
 
+    <button class="add-task-btn" id="addTaskBtn">${ICONS.plus} 添加自定义提醒</button>
+
     <div class="quick-actions">
-      <button class="btn btn-primary" id="pauseBtn">
-        ${isPaused ? '▶️ 继续' : '⏸️ 暂停'}
-      </button>
-      <button class="btn btn-secondary" id="resetBtn">
-        🔄 重置
-      </button>
+      <button class="btn btn-primary" id="pauseBtn">${isPaused ? ICONS.play : ICONS.pause} ${isPaused ? '继续' : '暂停'}</button>
+      <button class="btn btn-secondary" id="resetBtn">${ICONS.reset} 全部重置</button>
     </div>
 
     <div class="settings-section">
-      <h3>设置</h3>
-      <div class="setting-row">
-        <label>提示音</label>
-        <div class="toggle ${settings.soundEnabled ? 'active' : ''}" data-setting="soundEnabled"></div>
-      </div>
-      <div class="setting-row">
-        <label>开机自启动</label>
-        <div class="toggle ${settings.autoStart ? 'active' : ''}" data-setting="autoStart"></div>
-      </div>
+      <h3>系统设置</h3>
+      <div class="setting-row"><label>提示音</label><div class="toggle ${settings.soundEnabled ? 'active' : ''}" id="soundToggle"></div></div>
+      <div class="setting-row"><label>开机自启动</label><div class="toggle ${settings.autoStart ? 'active' : ''}" id="startToggle"></div></div>
     </div>
 
-    <div class="notification-popup">
+    <div class="notification-popup ${activePopup ? 'show' : ''}">
       <div class="notification-content">
-        <div class="emoji">🧘</div>
-        <h2>该起来活动了！</h2>
-        <p>久坐对身体不好，起来走动一下吧~</p>
+        <div class="emoji">${activePopup ? (ICONS[activePopup.icon] || ICONS.bell) : ''}</div>
+        <h2>${activePopup ? activePopup.title : ''}</h2>
+        <p>${activePopup ? activePopup.desc : ''}</p>
         <button class="btn btn-primary" id="dismissBtn">我知道了</button>
       </div>
     </div>
 
-    <div class="footer">
-      健康提醒助手 v1.0 · 最小化到托盘继续运行
-    </div>
+    <div class="footer">健康提醒助手 v1.3 · 愿你每天都有好身体</div>
   `;
 
-  document.querySelectorAll('.toggle[data-toggle]').forEach(el => {
-    el.addEventListener('click', () => toggleReminder(el.dataset.toggle));
-  });
-  
-  document.querySelectorAll('.interval-input').forEach(el => {
-    el.addEventListener('change', (e) => updateInterval(el.dataset.type, e.target.value));
-  });
-  
-  document.querySelectorAll('.toggle[data-setting]').forEach(el => {
-    el.addEventListener('click', () => toggleSetting(el.dataset.setting));
-  });
-  
-  document.getElementById('pauseBtn').addEventListener('click', togglePause);
-  document.getElementById('resetBtn').addEventListener('click', resetAll);
-  document.getElementById('dismissBtn').addEventListener('click', () => {
-    const next = getNextReminder();
-    dismissNotification(next.type || 'sit');
-  });
+  bindEvents();
+  updateLiveValues();
 }
 
-async function init() {
-  await loadSettings();
-  
-  countdowns.sit = settings.sitInterval * 60;
-  countdowns.water = settings.waterInterval * 60;
-  countdowns.eye = settings.eyeInterval * 60;
-  
-  render();
-  
-  setInterval(tick, 1000);
-  
-  listen('show-window', () => {
-    invoke('show_main_window');
+function bindEvents() {
+  document.querySelectorAll('.toggle[data-toggle-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      const task = settings.tasks.find(t => t.id === el.dataset.toggleId);
+      if (task) {
+        task.enabled = !task.enabled;
+        el.classList.toggle('active', task.enabled);
+        saveSettings();
+        // 只有切换开关才可能改变主倒计时，所以更新一下
+        updateLiveValues();
+      }
+    });
   });
+
+  document.querySelectorAll('.interval-input').forEach(el => {
+    el.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      if (val > 0) {
+        updateTask(el.dataset.id, { interval: val });
+        // 立即更新该卡片的小环和倒计时文字，但不触碰 Input 本身
+        updateLiveValues();
+      }
+    });
+  });
+
+  document.querySelectorAll('.preset-btn').forEach(el => {
+    el.addEventListener('click', () => {
+      const val = parseInt(el.dataset.val);
+      updateTask(el.dataset.id, { interval: val });
+      const input = document.querySelector(`.interval-input[data-id="${el.dataset.id}"]`);
+      if (input) input.value = val;
+      updateLiveValues();
+    });
+  });
+
+  document.querySelectorAll('.title[contenteditable="true"]').forEach(el => {
+    el.addEventListener('blur', (e) => {
+      updateTask(el.dataset.id, { title: e.target.innerText });
+      updateLiveValues();
+    });
+  });
+
+  document.querySelectorAll('.progress-mini[data-reset-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.resetId;
+      const task = settings.tasks.find(t => t.id === id);
+      if (task) {
+        countdowns[id] = task.interval * 60;
+        updateLiveValues();
+      }
+    });
+  });
+
+  document.querySelectorAll('.remove-btn').forEach(el => {
+    el.addEventListener('click', () => removeTask(el.dataset.id));
+  });
+
+  document.getElementById('addTaskBtn').onclick = addTask;
+  document.getElementById('pauseBtn').onclick = togglePause;
+  document.getElementById('resetBtn').onclick = resetAll;
+  document.getElementById('dismissBtn').onclick = dismissNotification;
+  
+  document.getElementById('soundToggle').onclick = (e) => {
+    settings.soundEnabled = !settings.soundEnabled;
+    e.target.classList.toggle('active', settings.soundEnabled);
+    saveSettings();
+  };
+  
+  document.getElementById('startToggle').onclick = (e) => {
+    settings.autoStart = !settings.autoStart;
+    e.target.classList.toggle('active', settings.autoStart);
+    invoke('set_autostart', { enabled: settings.autoStart }).catch(() => {});
+    saveSettings();
+  };
 }
+
+window.triggerNotification = triggerNotification;
+window.settings = settings;
 
 init();

@@ -5,22 +5,22 @@
 }
 
 :root {
-  --primary: #6366f1;
-  --primary-dark: #4f46e5;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --bg: #0f172a;
-  --bg-card: #1e293b;
-  --bg-hover: #334155;
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
-  --border: #334155;
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --primary: #007aff;
+  --primary-dark: #005bb5;
+  --success: #34c759;
+  --warning: #ff9500;
+  --danger: #ff3b30;
+  --bg: #f2f2f7;
+  --bg-card: #ffffff;
+  --bg-hover: #e5e5ea;
+  --text: #000000;
+  --text-muted: #6e6e73;
+  --border: #dcdcdc;
+  --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Helvetica Neue", "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -41,10 +41,7 @@ body {
 .header h1 {
   font-size: 1.75rem;
   font-weight: 600;
-  background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
 }
 
 .header p {
@@ -66,24 +63,24 @@ body {
   padding: 16px;
   text-align: center;
   border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
 .status-item .icon {
-  font-size: 1.5rem;
   margin-bottom: 8px;
+  color: var(--primary);
+  height: 24px;
 }
 
 .status-item .value {
   font-size: 1.25rem;
   font-weight: 600;
 }
-
 .status-item .label {
   font-size: 0.75rem;
   color: var(--text-muted);
   margin-top: 4px;
 }
-
 .timer-display {
   background: var(--bg-card);
   border-radius: 16px;
@@ -93,50 +90,44 @@ body {
   border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
+  box-shadow: var(--shadow);
 }
-
 .timer-display::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--primary), #a855f7, var(--primary));
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--success), var(--primary));
   background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+  animation: shimmer 3s infinite linear;
 }
-
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
-
 .timer-ring {
   width: 180px;
   height: 180px;
   margin: 0 auto 20px;
   position: relative;
 }
-
 .timer-ring svg {
   transform: rotate(-90deg);
 }
-
 .timer-ring .bg {
   fill: none;
   stroke: var(--border);
-  stroke-width: 8;
+  stroke-width: 10;
 }
-
 .timer-ring .progress {
   fill: none;
   stroke: var(--primary);
-  stroke-width: 8;
+  stroke-width: 10;
   stroke-linecap: round;
   transition: stroke-dashoffset 1s linear;
 }
-
 .timer-ring .time-text {
   position: absolute;
   top: 50%;
@@ -144,29 +135,24 @@ body {
   transform: translate(-50%, -50%);
   text-align: center;
 }
-
 .timer-ring .minutes {
   font-size: 2.5rem;
   font-weight: 700;
 }
-
 .timer-ring .seconds {
   font-size: 1rem;
   color: var(--text-muted);
 }
-
 .timer-label {
   font-size: 1rem;
   color: var(--text-muted);
 }
-
 .reminder-cards {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-bottom: 24px;
 }
-
 .reminder-card {
   background: var(--bg-card);
   border-radius: 12px;
@@ -176,15 +162,14 @@ body {
   gap: 16px;
   border: 1px solid var(--border);
   transition: all 0.2s ease;
+  box-shadow: var(--shadow);
 }
-
 .reminder-card:hover {
   background: var(--bg-hover);
-  transform: translateX(4px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
 }
-
 .reminder-card .icon {
-  font-size: 1.5rem;
   width: 48px;
   height: 48px;
   display: flex;
@@ -192,52 +177,46 @@ body {
   justify-content: center;
   background: var(--bg);
   border-radius: 12px;
+  color: var(--primary);
 }
-
 .reminder-card .info {
   flex: 1;
 }
-
 .reminder-card .title {
   font-weight: 600;
   margin-bottom: 4px;
 }
-
 .reminder-card .desc {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
-
 .reminder-card .toggle {
   position: relative;
-  width: 48px;
-  height: 26px;
-  background: var(--border);
-  border-radius: 13px;
+  width: 44px;
+  height: 24px;
+  background: #e5e5ea;
+  border-radius: 12px;
   cursor: pointer;
   transition: background 0.2s ease;
 }
-
 .reminder-card .toggle.active {
-  background: var(--primary);
+  background: var(--success);
 }
-
 .reminder-card .toggle::after {
   content: '';
   position: absolute;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   background: white;
   border-radius: 50%;
   top: 2px;
   left: 2px;
   transition: transform 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
-
 .reminder-card .toggle.active::after {
-  transform: translateX(22px);
+  transform: translateX(20px);
 }
-
 .interval-input {
   width: 60px;
   background: var(--bg);
@@ -248,18 +227,16 @@ body {
   text-align: center;
   font-size: 0.875rem;
 }
-
 .interval-input:focus {
   outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
 }
-
 .quick-actions {
   display: flex;
   gap: 12px;
   margin-bottom: 24px;
 }
-
 .btn {
   flex: 1;
   padding: 14px 20px;
@@ -273,35 +250,34 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-shadow: var(--shadow);
 }
-
 .btn-primary {
   background: var(--primary);
   color: white;
 }
-
 .btn-primary:hover {
   background: var(--primary-dark);
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
-
 .btn-secondary {
   background: var(--bg-card);
   color: var(--text);
   border: 1px solid var(--border);
 }
-
 .btn-secondary:hover {
   background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
 }
-
 .settings-section {
   background: var(--bg-card);
   border-radius: 12px;
   padding: 20px;
   border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
-
 .settings-section h3 {
   font-size: 0.875rem;
   color: var(--text-muted);
@@ -309,7 +285,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
 .setting-row {
   display: flex;
   justify-content: space-between;
@@ -317,22 +292,19 @@ body {
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
 }
-
 .setting-row:last-child {
   border-bottom: none;
 }
-
 .setting-row label {
   font-size: 0.875rem;
 }
-
 .notification-popup {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -341,12 +313,10 @@ body {
   visibility: hidden;
   transition: all 0.3s ease;
 }
-
 .notification-popup.show {
   opacity: 1;
   visibility: visible;
 }
-
 .notification-content {
   background: var(--bg-card);
   border-radius: 24px;
@@ -356,35 +326,112 @@ body {
   transform: scale(0.9);
   transition: transform 0.3s ease;
   border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
-
 .notification-popup.show .notification-content {
   transform: scale(1);
 }
-
 .notification-content .emoji {
-  font-size: 4rem;
   margin-bottom: 24px;
   animation: bounce 1s infinite;
+  color: var(--primary);
 }
-
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
 }
-
 .notification-content h2 {
   font-size: 1.5rem;
   margin-bottom: 12px;
 }
-
 .notification-content p {
   color: var(--text-muted);
   margin-bottom: 32px;
 }
-
 .notification-content .btn {
   width: 100%;
+}
+.interval-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  padding: 4px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.reminder-card .progress-mini {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.progress-mini svg {
+  transform: rotate(-90deg);
+}
+
+.progress-mini .bg {
+  fill: none;
+  stroke: var(--bg);
+  stroke-width: 4;
+}
+
+.progress-mini .progress {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s linear;
+}
+
+.add-task-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.add-task-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--bg);
 }
 
 .footer {
@@ -392,4 +439,17 @@ body {
   padding: 20px;
   color: var(--text-muted);
   font-size: 0.75rem;
+}
+
+.icon svg {
+  width: 24px;
+  height: 24px;
+}
+.quick-actions .btn svg {
+  width: 16px;
+  height: 16px;
+}
+.notification-content .emoji svg {
+  width: 48px;
+  height: 48px;
 }

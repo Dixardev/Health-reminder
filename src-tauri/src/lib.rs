@@ -49,15 +49,27 @@ fn set_autostart(enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
+use tauri_plugin_notification::NotificationExt;
+
 #[tauri::command]
 fn play_notification_sound() {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
         let _ = Command::new("powershell")
-            .args(["-Command", "[console]::beep(800,200)"])
+            .args(["-Command", "(New-Object System.Media.SoundPlayer 'C:\\Windows\\Media\\Notify.wav').PlaySync()"])
             .spawn();
     }
+}
+
+#[tauri::command]
+fn show_notification(app: tauri::AppHandle, title: String, body: String) {
+    app.notification()
+        .builder()
+        .title(title)
+        .body(body)
+        .show()
+        .unwrap();
 }
 
 #[tauri::command]
@@ -69,11 +81,13 @@ fn show_main_window(window: tauri::Window) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             load_settings,
             save_settings,
             set_autostart,
             play_notification_sound,
+            show_notification,
             show_main_window,
         ])
         .setup(|app| {
