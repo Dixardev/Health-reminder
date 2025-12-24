@@ -6,17 +6,24 @@
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/kaima2022/desk-reminder/releases/download/v1.4.8/health-reminder_1.4.8_x64-setup.exe#/setup.exe",
-            "hash": ""
+            "url": "https://github.com/kaima2022/desk-reminder/releases/download/v1.4.8/health-reminder_1.4.8_x64-setup.exe",
+            "hash": "8c6d5386a04f4755287f4006fb4b487994c5a68ea09dcf2625d28c3621912d91"
         }
     },
-    "innosetup": true,
-    "post_install": "Remove-Item \"$dir\\setup.exe\" -ErrorAction SilentlyContinue",
+    "installer": {
+        "script": "Start-Process \"$dir\\health-reminder_$version_x64-setup.exe\" -ArgumentList '/S' -Wait"
+    },
+    "uninstaller": {
+        "script": [
+            "$uninstaller = \"$env:LOCALAPPDATA\\health-reminder\\uninstall.exe\"",
+            "if (Test-Path $uninstaller) { Start-Process $uninstaller -ArgumentList '/S' -Wait }"
+        ]
+    },
     "checkver": { "github": "https://github.com/kaima2022/desk-reminder" },
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/kaima2022/desk-reminder/releases/download/v$version/health-reminder_$version_x64-setup.exe#/setup.exe"
+                "url": "https://github.com/kaima2022/desk-reminder/releases/download/v$version/health-reminder_$version_x64-setup.exe"
             }
         }
     }
