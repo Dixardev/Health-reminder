@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/ScoopInstaller/Scoop/master/schema.json",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "健康办公助手 - 智能化的久坐、补水与用眼休息提醒工具",
   "homepage": "https://github.com/kaima2022/desk-reminder",
   "license": "MIT",
@@ -26,5 +26,5 @@
       }
     }
   },
-  "hash": "fe69bfbcc4a4cbb0f4844d5d8138f7a12c430a8527b76255d0299ad13df9f834"
+  "hash": "eb6201c22174d5dda895ace51c21902623f1062df797394a177cb4bcbaf051e5"
 }
