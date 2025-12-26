@@ -4,7 +4,7 @@
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square)](https://tauri.app/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.5.0-orange?style=flat-square)](https://github.com/)
+[![Version](https://img.shields.io/badge/Version-1.5.1-orange?style=flat-square)](https://github.com/)
 
 在快节奏的数字时代，健康的身体是高效生产力的基石。**健康办公助手** 是一款基于 Rust 与 Tauri 开发的高性能桌面应用，旨在通过智能化的任务排程与多维提醒，帮助你在专注工作的同时，科学地进行久坐、补水与用眼休息。
 
@@ -139,6 +139,11 @@ npm run tauri build
 ## 📜 版本记录
 
 > **请下载最新安装包重新安装（会自动覆盖）**
+
+### v1.5.1 (2025-12-26)
+- **后端定时器重构**：将计时逻辑从前端 JavaScript 移至 Rust 后端，解决 macOS App Nap 和窗口最小化时计时器被节流导致倒计时变慢的问题。
+- **跨平台计时精准**：采用系统级线程定时器，不受 WebView 节流影响，Windows/macOS/Linux 表现一致。
+- **准时提醒保障**：即使应用在后台或最小化状态，也能准时触发提醒通知。
 
 ### v1.5.0 (2025-12-26)
 - **自动更新系统**：启动时自动检测新版本，支持设置中手动检查，显示版本状态，一键完成更新安装。

@@ -1,20 +1,66 @@
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::thread;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent, TrayIcon},
-    Manager, WindowEvent, State, Emitter, WebviewWindowBuilder, WebviewUrl,
+    Manager, WindowEvent, State, Emitter, WebviewWindowBuilder, WebviewUrl, AppHandle,
 };
 use tauri_plugin_notification::NotificationExt;
 use url::form_urlencoded;
 
-#[cfg(target_os = "windows")]
-use std::sync::atomic::{AtomicBool, Ordering};
-
 struct TrayState(Mutex<Option<TrayIcon>>);
 struct LockState(Mutex<Vec<String>>);
 struct PauseMenuState(Mutex<Option<MenuItem<tauri::Wry>>>);
+
+// ============= 后端定时器系统 =============
+
+#[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
+pub struct TaskConfig {
+    pub id: String,
+    pub title: String,
+    pub desc: String,
+    pub interval: u64,  // 分钟
+    pub enabled: bool,
+    pub icon: String,
+}
+
+#[derive(Clone, Debug)]
+struct TaskTimer {
+    config: TaskConfig,
+    reset_time: Instant,
+    triggered: bool,  // 本轮是否已触发
+}
+
+struct TimerState {
+    tasks: HashMap<String, TaskTimer>,
+    paused: bool,
+    pause_start: Option<Instant>,
+    system_locked: bool,
+    lock_screen_active: bool,
+}
+
+impl TimerState {
+    fn new() -> Self {
+        Self {
+            tasks: HashMap::new(),
+            paused: false,
+            pause_start: None,
+            system_locked: false,
+            lock_screen_active: false,
+        }
+    }
+}
+
+static TIMER_STATE: std::sync::OnceLock<Mutex<TimerState>> = std::sync::OnceLock::new();
+
+fn get_timer_state() -> &'static Mutex<TimerState> {
+    TIMER_STATE.get_or_init(|| Mutex::new(TimerState::new()))
+}
 
 #[cfg(target_os = "windows")]
 static SYSTEM_LOCKED: AtomicBool = AtomicBool::new(false);
@@ -101,6 +147,209 @@ struct LockTaskArgs {
     desc: String,
     duration: i32,
     icon: String,
+}
+
+// ============= 定时器命令 =============
+
+#[derive(Clone, serde::Serialize)]
+struct CountdownInfo {
+    id: String,
+    remaining: u64,  // 剩余秒数
+    total: u64,      // 总秒数
+    enabled: bool,
+}
+
+#[derive(Clone, serde::Serialize)]
+struct TaskTriggeredPayload {
+    id: String,
+    title: String,
+    desc: String,
+    icon: String,
+}
+
+#[tauri::command]
+fn sync_tasks(tasks: Vec<TaskConfig>) {
+    let mut state = get_timer_state().lock().unwrap();
+    let now = Instant::now();
+
+    // 保留现有任务的计时状态，只更新配置
+    let mut new_tasks: HashMap<String, TaskTimer> = HashMap::new();
+
+    for task in tasks {
+        if let Some(existing) = state.tasks.get(&task.id) {
+            // 任务已存在，检查 interval 是否变化
+            if existing.config.interval != task.interval {
+                // interval 变了，重置计时
+                new_tasks.insert(task.id.clone(), TaskTimer {
+                    config: task,
+                    reset_time: now,
+                    triggered: false,
+                });
+            } else {
+                // interval 没变，保留计时状态
+                new_tasks.insert(task.id.clone(), TaskTimer {
+                    config: task,
+                    reset_time: existing.reset_time,
+                    triggered: existing.triggered,
+                });
+            }
+        } else {
+            // 新任务
+            new_tasks.insert(task.id.clone(), TaskTimer {
+                config: task,
+                reset_time: now,
+                triggered: false,
+            });
+        }
+    }
+
+    state.tasks = new_tasks;
+}
+
+#[tauri::command]
+fn timer_pause() {
+    let mut state = get_timer_state().lock().unwrap();
+    if !state.paused {
+        state.paused = true;
+        state.pause_start = Some(Instant::now());
+    }
+}
+
+#[tauri::command]
+fn timer_resume() {
+    let mut state = get_timer_state().lock().unwrap();
+    if state.paused {
+        if let Some(pause_start) = state.pause_start {
+            let pause_duration = pause_start.elapsed();
+            // 补偿暂停时间
+            for timer in state.tasks.values_mut() {
+                timer.reset_time += pause_duration;
+            }
+        }
+        state.paused = false;
+        state.pause_start = None;
+    }
+}
+
+#[tauri::command]
+fn timer_reset_task(task_id: String) {
+    let mut state = get_timer_state().lock().unwrap();
+    if let Some(timer) = state.tasks.get_mut(&task_id) {
+        timer.reset_time = Instant::now();
+        timer.triggered = false;
+    }
+}
+
+#[tauri::command]
+fn timer_reset_all() {
+    let mut state = get_timer_state().lock().unwrap();
+    let now = Instant::now();
+    for timer in state.tasks.values_mut() {
+        timer.reset_time = now;
+        timer.triggered = false;
+    }
+}
+
+#[tauri::command]
+fn get_countdowns() -> Vec<CountdownInfo> {
+    let state = get_timer_state().lock().unwrap();
+    let now = Instant::now();
+
+    state.tasks.values().map(|timer| {
+        let total_secs = timer.config.interval * 60;
+        let elapsed = now.duration_since(timer.reset_time).as_secs();
+        let remaining = if elapsed >= total_secs { 0 } else { total_secs - elapsed };
+
+        CountdownInfo {
+            id: timer.config.id.clone(),
+            remaining,
+            total: total_secs,
+            enabled: timer.config.enabled,
+        }
+    }).collect()
+}
+
+#[tauri::command]
+fn timer_set_system_locked(locked: bool) {
+    let mut state = get_timer_state().lock().unwrap();
+    if locked && !state.system_locked {
+        // 刚锁屏，记录暂停时间
+        state.system_locked = true;
+        if state.pause_start.is_none() {
+            state.pause_start = Some(Instant::now());
+        }
+    } else if !locked && state.system_locked {
+        // 解锁，补偿时间
+        if let Some(pause_start) = state.pause_start {
+            let pause_duration = pause_start.elapsed();
+            for timer in state.tasks.values_mut() {
+                timer.reset_time += pause_duration;
+            }
+        }
+        state.system_locked = false;
+        if !state.paused {
+            state.pause_start = None;
+        }
+    }
+}
+
+#[tauri::command]
+fn timer_set_lock_screen_active(active: bool) {
+    let mut state = get_timer_state().lock().unwrap();
+    state.lock_screen_active = active;
+}
+
+fn start_timer_thread(app_handle: AppHandle) {
+    thread::spawn(move || {
+        loop {
+            thread::sleep(Duration::from_secs(1));
+
+            let mut tasks_to_trigger: Vec<TaskTriggeredPayload> = Vec::new();
+
+            {
+                let mut state = get_timer_state().lock().unwrap();
+
+                // 如果暂停、系统锁屏或锁屏模式激活，跳过检查
+                if state.paused || state.system_locked || state.lock_screen_active {
+                    continue;
+                }
+
+                let now = Instant::now();
+
+                for timer in state.tasks.values_mut() {
+                    if !timer.config.enabled || timer.triggered {
+                        continue;
+                    }
+
+                    let elapsed = now.duration_since(timer.reset_time).as_secs();
+                    let total_secs = timer.config.interval * 60;
+
+                    if elapsed >= total_secs {
+                        // 触发提醒
+                        tasks_to_trigger.push(TaskTriggeredPayload {
+                            id: timer.config.id.clone(),
+                            title: timer.config.title.clone(),
+                            desc: timer.config.desc.clone(),
+                            icon: timer.config.icon.clone(),
+                        });
+
+                        // 重置计时，开始下一轮
+                        timer.reset_time = now;
+                        timer.triggered = false;
+                    }
+                }
+            }
+
+            // 发送触发事件到前端
+            for task in tasks_to_trigger {
+                let _ = app_handle.emit("task-triggered", task);
+            }
+
+            // 每秒发送倒计时更新
+            let countdowns = get_countdowns();
+            let _ = app_handle.emit("countdown-update", countdowns);
+        }
+    });
 }
 
 fn get_settings_path() -> PathBuf {
@@ -303,6 +552,14 @@ pub fn run() {
             update_pause_menu,
             enter_lock_mode,
             exit_lock_mode,
+            sync_tasks,
+            timer_pause,
+            timer_resume,
+            timer_reset_task,
+            timer_reset_all,
+            get_countdowns,
+            timer_set_system_locked,
+            timer_set_lock_screen_active,
         ])
         .manage(TrayState(Mutex::new(None)))
         .manage(LockState(Mutex::new(Vec::new())))
@@ -355,7 +612,10 @@ pub fn run() {
             
             *app.state::<TrayState>().0.lock().unwrap() = Some(tray);
             *app.state::<PauseMenuState>().0.lock().unwrap() = Some(pause);
-            
+
+            // 启动后端定时器线程
+            start_timer_thread(app.handle().clone());
+
             #[cfg(target_os = "windows")]
             start_session_monitor(app.handle().clone());
             

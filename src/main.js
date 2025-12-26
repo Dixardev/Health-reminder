@@ -33,14 +33,13 @@ let settings = {
   lockDuration: 10,
 };
 
-let countdowns = {};
+let countdowns = {};  // 现在由后端事件更新
 let stats = {
   sitBreaks: 0,
   waterCups: 0,
   workMinutes: 0,
 };
 let isPaused = false;
-let isSystemLocked = false;
 let workStartTime = Date.now();
 let activePopup = null;
 let lockScreenState = {
@@ -50,12 +49,25 @@ let lockScreenState = {
   unlockProgress: 0,
   unlockTimer: null,
   waitingConfirm: false,
-}; 
+};
 
 let updateInfo = null;
 let isUpdating = false;
 let isCheckingUpdate = false;
-let updateMessage = null; 
+let updateMessage = null;
+
+// 同步任务配置到后端
+async function syncTasksToBackend() {
+  const tasksForBackend = settings.tasks.map(t => ({
+    id: t.id,
+    title: t.title,
+    desc: t.desc,
+    interval: t.interval,
+    enabled: t.enabled,
+    icon: t.icon
+  }));
+  await invoke('sync_tasks', { tasks: tasksForBackend }).catch(console.error);
+}
 
 async function init() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -67,9 +79,9 @@ async function init() {
       id: 'slave_lock'
     };
     const duration = parseInt(urlParams.get('duration') || '10');
-    
+
     settings.lockDuration = duration;
-    
+
     lockScreenState = {
       active: true,
       remaining: duration,
@@ -78,9 +90,9 @@ async function init() {
       unlockTimer: null,
       waitingConfirm: false,
     };
-    
+
     renderFullUI();
-    
+
     // 隐藏从属屏幕的解锁按钮
     setTimeout(() => {
       const btn = document.querySelector('.unlock-btn');
@@ -99,7 +111,7 @@ async function init() {
   }
 
   await loadSettings();
-  
+
   try {
     settings.autoStart = await isEnabled();
   } catch (e) {
@@ -111,16 +123,36 @@ async function init() {
   } catch (e) {
     console.error('Failed to request notification permission', e);
   }
-  
+
+  // 初始化 countdowns 对象用于 UI 显示
   settings.tasks.forEach(task => {
     if (countdowns[task.id] === undefined) {
       countdowns[task.id] = task.interval * 60;
     }
   });
 
-  renderFullUI(); 
-  setInterval(tick, 1000);
-  
+  // 同步任务到后端定时器
+  await syncTasksToBackend();
+
+  renderFullUI();
+
+  // 监听后端倒计时更新事件
+  listen('countdown-update', (event) => {
+    const updates = event.payload;
+    updates.forEach(info => {
+      countdowns[info.id] = info.remaining;
+    });
+    updateLiveValues();
+  });
+
+  // 监听后端任务触发事件
+  listen('task-triggered', async (event) => {
+    const task = event.payload;
+    // 找到完整的任务配置
+    const fullTask = settings.tasks.find(t => t.id === task.id) || task;
+    await triggerNotification(fullTask);
+  });
+
   listen('show-window', () => {
     invoke('show_main_window');
   });
@@ -134,12 +166,17 @@ async function init() {
   });
 
   listen('system-locked', () => {
-    isSystemLocked = true;
+    invoke('timer_set_system_locked', { locked: true }).catch(console.error);
   });
 
   listen('system-unlocked', () => {
-    isSystemLocked = false;
+    invoke('timer_set_system_locked', { locked: false }).catch(console.error);
   });
+
+  // 每秒更新工作时间统计（这个保留在前端）
+  setInterval(() => {
+    stats.workMinutes = Math.floor((Date.now() - workStartTime) / 60000);
+  }, 1000);
 
   checkForUpdates();
 }
@@ -236,28 +273,14 @@ function saveStats() {
   }));
 }
 
-function tick() {
-  if (isPaused || isSystemLocked || lockScreenState.active) return;
-  stats.workMinutes = Math.floor((Date.now() - workStartTime) / 60000);
-  
-  settings.tasks.forEach(task => {
-    if (task.enabled && countdowns[task.id] > 0) {
-      countdowns[task.id]--;
-      if (countdowns[task.id] === 0) {
-        countdowns[task.id] = task.interval * 60; 
-        triggerNotification(task);
-      }
-    }
-  });
-  updateLiveValues(); 
-}
+// tick 函数已移至 Rust 后端，不再需要前端定时器
 
 async function triggerNotification(task) {
   if (settings.soundEnabled) {
     invoke('play_notification_sound').catch(() => {});
   }
   invoke('show_notification', { title: task.title, body: task.desc }).catch(console.error);
-  
+
   if (settings.lockScreenEnabled) {
     await startLockScreen(task);
   } else {
@@ -267,6 +290,9 @@ async function triggerNotification(task) {
 }
 
 async function startLockScreen(task) {
+  // 通知后端锁屏模式激活
+  invoke('timer_set_lock_screen_active', { active: true }).catch(console.error);
+
   lockScreenState = {
     active: true,
     remaining: settings.lockDuration,
@@ -275,7 +301,7 @@ async function startLockScreen(task) {
     unlockTimer: null,
     waitingConfirm: false,
   };
-  
+
   try {
     await invoke('show_main_window');
     await invoke('enter_lock_mode', {
@@ -316,19 +342,22 @@ function showLockConfirm() {
 async function endLockScreen() {
   lockScreenState.active = false;
   lockScreenState.waitingConfirm = false;
-  
+
+  // 通知后端锁屏模式结束
+  invoke('timer_set_lock_screen_active', { active: false }).catch(console.error);
+
   const id = lockScreenState.task?.id;
   if (id === 'sit') stats.sitBreaks++;
   if (id === 'water') stats.waterCups++;
   saveStats();
-  
+
   try {
     await invoke('exit_lock_mode');
     await invoke('hide_main_window');
   } catch (e) {
     console.error('Failed to exit lock mode', e);
   }
-  
+
   renderFullUI();
 }
 
@@ -406,6 +435,7 @@ function addTask() {
   });
   countdowns[id] = 30 * 60;
   saveSettings();
+  syncTasksToBackend();
   renderFullUI();
 }
 
@@ -413,6 +443,7 @@ function removeTask(id) {
   settings.tasks = settings.tasks.filter(t => t.id !== id);
   delete countdowns[id];
   saveSettings();
+  syncTasksToBackend();
   renderFullUI();
 }
 
@@ -424,20 +455,31 @@ function updateTask(id, updates) {
       countdowns[id] = task.interval * 60;
     }
     saveSettings();
+    // 同步到后端
+    syncTasksToBackend();
   }
 }
 
 function togglePause() {
   isPaused = !isPaused;
+  // 通知后端暂停/恢复
+  if (isPaused) {
+    invoke('timer_pause').catch(console.error);
+  } else {
+    invoke('timer_resume').catch(console.error);
+  }
   invoke('update_pause_menu', { paused: isPaused }).catch(() => {});
   renderFullUI();
 }
 
 function resetAll() {
+  // 通知后端重置所有任务
+  invoke('timer_reset_all').catch(console.error);
   settings.tasks.forEach(task => {
     countdowns[task.id] = task.interval * 60;
   });
   isPaused = false;
+  invoke('timer_resume').catch(console.error);
   renderFullUI();
 }
 
@@ -598,7 +640,7 @@ function renderFullUI() {
       <div class="setting-row">
         <div class="setting-info">
           <label>版本更新</label>
-          <span class="setting-desc">当前版本 v1.5.0${updateInfo ? `（有新版本 v${updateInfo.version}）` : '（已是最新）'}</span>
+          <span class="setting-desc">当前版本 v1.5.1${updateInfo ? `（有新版本 v${updateInfo.version}）` : '（已是最新）'}</span>
         </div>
         <button class="check-update-btn" id="checkUpdateBtn" ${isCheckingUpdate ? 'disabled' : ''}>
           ${isCheckingUpdate ? '<span class="spinner"></span> 检查中...' : (updateInfo ? '立即更新' : '检查更新')}
@@ -665,7 +707,7 @@ function renderFullUI() {
       </div>
     </div>
 
-    <div class="footer">健康办公助手 v1.5.0 · 愿你每天都有好身体</div>
+    <div class="footer">健康办公助手 v1.5.1 · 愿你每天都有好身体</div>
 
     ${updateInfo ? `
     <div class="update-banner ${isUpdating ? 'updating' : ''}">
@@ -763,6 +805,8 @@ function bindEvents() {
       const task = settings.tasks.find(t => t.id === id);
       if (task) {
         countdowns[id] = task.interval * 60;
+        // 通知后端重置该任务
+        invoke('timer_reset_task', { taskId: id }).catch(console.error);
         updateLiveValues();
       }
     });
