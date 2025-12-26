@@ -10,7 +10,7 @@
 
 ---
 
-## 🖼️ 视觉呈现
+##  展示
 
 ### 核心看板 (Dashboard) & 自定义任务排程 (Tasks)
 
@@ -27,6 +27,10 @@
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="./docs/screenshots/弹窗提醒.png" alt="System notification" width="48%">
 </p>
+
+### 托盘显示
+<img width="176" height="184" alt="image" src="https://github.com/user-attachments/assets/f7b40cf9-bf2e-4459-84f8-72ee05a4a549" />     <img width="300" height="196" alt="image" src="https://github.com/user-attachments/assets/66c1c52e-d8ef-4d45-afb7-bf01bb21a422" />
+
 
 ### 锁屏功能（选择开启）
 
