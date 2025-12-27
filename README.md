@@ -138,7 +138,14 @@ npm run tauri build
 
 ## 📜 版本记录
 
-> **请下载最新安装包重新安装（会自动覆盖）**
+> ### 自动检查更新 || 手动检查更新 || 安装包更新 || Scoop 更新 
+> <img width="505" height="192" alt="image" src="https://github.com/user-attachments/assets/31e4d792-6800-4540-bead-58024aa3ba08" />
+> <img width="377" height="184" alt="image" src="https://github.com/user-attachments/assets/e54b30f4-97c8-4561-9c69-9373a15137ea" />
+
+> #### scoop 更新命令
+> scoop update health-reminder
+
+
 
 ### v1.5.1 (2025-12-26) （暂时存在bug 待更新）
 - **后端定时器重构**：将计时逻辑从前端 JavaScript 移至 Rust 后端，解决 macOS App Nap 和窗口最小化时计时器被节流导致倒计时变慢的问题。
