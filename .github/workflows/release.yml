@@ -59,7 +59,8 @@ jobs:
             libnm-dev \
             libdbus-1-dev \
             libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev
+            libjavascriptcoregtk-4.1-dev \
+            libxss-dev
 
       - name: Install frontend dependencies
         run: npm install
