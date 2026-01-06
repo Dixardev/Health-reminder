@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import { requestPermission } from '@tauri-apps/plugin-notification';
 import { check } from '@tauri-apps/plugin-updater';
@@ -20,9 +21,9 @@ const ICONS = {
 };
 
 const DEFAULT_TASKS = [
-  { id: 'sit', title: '久坐提醒', desc: '该起来活动了，走动一下吧~', interval: 45, enabled: true, icon: 'sit', lockDuration: 60, autoResetOnIdle: true },
-  { id: 'water', title: '喝水提醒', desc: '该喝口水了，保持水分充足~', interval: 60, enabled: true, icon: 'water', lockDuration: 60, autoResetOnIdle: true },
-  { id: 'eye', title: '护眼提醒', desc: '让眼睛休息一下，看看远处~', interval: 20, enabled: true, icon: 'eye', lockDuration: 60, autoResetOnIdle: true }
+  { id: 'sit', title: '久坐提醒', desc: '该起来活动了，走动一下吧~', interval: 45, enabled: true, icon: 'sit', lockDuration: 60, lockMode: 'normal', leadSec: 30, delayOnceEnabled: true, delayOnceSec: 300, autoResetOnIdle: true },
+  { id: 'water', title: '喝水提醒', desc: '该喝口水了，保持水分充足~', interval: 60, enabled: true, icon: 'water', lockDuration: 60, lockMode: 'off', leadSec: 0, delayOnceEnabled: false, delayOnceSec: 0, autoResetOnIdle: true },
+  { id: 'eye', title: '护眼提醒', desc: '让眼睛休息一下，看看远处~', interval: 20, enabled: true, icon: 'eye', lockDuration: 60, lockMode: 'normal', leadSec: 10, delayOnceEnabled: true, delayOnceSec: 120, autoResetOnIdle: true }
 ];
 
 let settings = {
@@ -31,6 +32,10 @@ let settings = {
   autoStart: false,
   lockScreenEnabled: false,
   lockDuration: 20,
+  lockEndRequireConfirm: false,
+  scheduleMode: 'independent', // independent | synced
+  syncedPair: { breakTaskId: 'sit', microTaskId: 'eye', ratioK: 3 },
+  conflictPolicy: 'priority', // priority | merge | defer
   idleThreshold: 300,  // 空闲阈值，秒，默认 5 分钟
 };
 
@@ -60,6 +65,13 @@ let updateMessage = null;
 
 // 同步任务配置到后端
 async function syncTasksToBackend() {
+  const getTaskPriority = (taskId) => {
+    if (taskId === 'sit') return 300;
+    if (taskId === 'eye') return 200;
+    if (taskId === 'water') return 100;
+    return 0;
+  };
+
   const tasksForBackend = settings.tasks.map(t => ({
     id: t.id,
     title: t.title,
@@ -67,7 +79,11 @@ async function syncTasksToBackend() {
     interval: t.interval,
     enabled: t.enabled,
     icon: t.icon,
-    auto_reset_on_idle: t.autoResetOnIdle || false
+    auto_reset_on_idle: t.autoResetOnIdle || false,
+    lead_sec: t.leadSec || 0,
+    delay_once_enabled: t.delayOnceEnabled || false,
+    delay_once_sec: t.delayOnceSec || 0,
+    priority: getTaskPriority(t.id),
   }));
   await invoke('sync_tasks', { tasks: tasksForBackend }).catch(console.error);
 }
@@ -113,6 +129,21 @@ async function init() {
     return;
   }
 
+  if (urlParams.get('mode') === 'prewarn') {
+    const prewarn = {
+      id: urlParams.get('id') || '',
+      title: urlParams.get('title') || '即将开始',
+      desc: urlParams.get('desc') || '',
+      icon: urlParams.get('icon') || 'bell',
+      remaining: parseInt(urlParams.get('remaining') || '0'),
+      leadSec: parseInt(urlParams.get('lead_sec') || '0'),
+      canDelay: urlParams.get('can_delay') === '1' || urlParams.get('can_delay') === 'true',
+      delaySec: parseInt(urlParams.get('delay_sec') || '0'),
+    };
+    renderPrewarnUI(prewarn);
+    return;
+  }
+ 
   await loadSettings();
 
   try {
@@ -127,6 +158,11 @@ async function init() {
     console.error('Failed to request notification permission', e);
   }
 
+  if (settings.scheduleMode === 'synced') {
+    applySyncedAlignment(settings.syncedPair?.breakTaskId);
+    saveSettings();
+  }
+
   // 初始化 countdowns 对象用于 UI 显示
   settings.tasks.forEach(task => {
     if (countdowns[task.id] === undefined) {
@@ -139,6 +175,9 @@ async function init() {
 
   // 同步空闲阈值到后端
   await invoke('set_idle_threshold', { seconds: settings.idleThreshold }).catch(console.error);
+
+  // 同步冲突处理策略到后端
+  await invoke('timer_set_conflict_policy', { policy: settings.conflictPolicy }).catch(console.error);
 
   renderFullUI();
 
@@ -157,6 +196,15 @@ async function init() {
     // 找到完整的任务配置
     const fullTask = settings.tasks.find(t => t.id === task.id) || task;
     await triggerNotification(fullTask);
+  });
+
+  // 监听后端预告事件（到点前 lead_sec 秒）
+  listen('task-lead', async (event) => {
+    const lead = event.payload;
+    // 只对仍存在的任务弹窗（避免旧配置残留）
+    const exists = settings.tasks.some(t => t.id === lead.id);
+    if (!exists) return;
+    await openPrewarnWindow(lead);
   });
 
   // 监听空闲状态变化
@@ -265,6 +313,25 @@ async function loadSettings() {
   } catch (e) {
     console.log('Using default settings');
   }
+
+  // 兼容旧版本配置：补齐任务字段默认值
+  if (!Array.isArray(settings.tasks)) {
+    settings.tasks = [...DEFAULT_TASKS];
+  } else {
+    settings.tasks = settings.tasks.map((task) => {
+      const defaults = DEFAULT_TASKS.find(d => d.id === task.id) || {};
+      return {
+        ...defaults,
+        ...task,
+        lockMode: task.lockMode ?? defaults.lockMode ?? 'off',
+        leadSec: task.leadSec ?? defaults.leadSec ?? 0,
+        delayOnceEnabled: task.delayOnceEnabled ?? defaults.delayOnceEnabled ?? false,
+        delayOnceSec: task.delayOnceSec ?? defaults.delayOnceSec ?? 0,
+        lockDuration: task.lockDuration ?? defaults.lockDuration ?? 0,
+        autoResetOnIdle: task.autoResetOnIdle ?? defaults.autoResetOnIdle ?? false,
+      };
+    });
+  }
   
   const savedStats = localStorage.getItem('reminder_stats');
   if (savedStats) {
@@ -288,13 +355,61 @@ function saveStats() {
 
 // tick 函数已移至 Rust 后端，不再需要前端定时器
 
+async function openPrewarnWindow(lead) {
+  const label = `prewarn-${lead.id}`;
+
+  try {
+    const existing = await WebviewWindow.getByLabel(label);
+    if (existing) {
+      await existing.setFocus();
+      return;
+    }
+  } catch (_) {
+    // ignore
+  }
+
+  const params = new URLSearchParams({
+    mode: 'prewarn',
+    id: lead.id,
+    title: lead.title,
+    desc: lead.desc,
+    icon: lead.icon,
+    remaining: String(lead.remaining ?? 0),
+    lead_sec: String(lead.lead_sec ?? 0),
+    can_delay: lead.can_delay ? '1' : '0',
+    delay_sec: String(lead.delay_sec ?? 0),
+  });
+
+  const url = `index.html?${params.toString()}`;
+
+  const win = new WebviewWindow(label, {
+    url,
+    title: '即将开始',
+    width: 360,
+    height: 200,
+    resizable: false,
+    decorations: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    center: true,
+  });
+
+  win.once('tauri://error', (e) => {
+    console.error('Failed to create prewarn window', e);
+  });
+}
+
 async function triggerNotification(task) {
   if (settings.soundEnabled) {
     invoke('play_notification_sound').catch(() => {});
   }
   invoke('show_notification', { title: task.title, body: task.desc }).catch(console.error);
 
-  if (settings.lockScreenEnabled) {
+  const lockDuration = task.lockDuration ?? settings.lockDuration;
+  const lockMode = task.lockMode || 'off';
+  const shouldLock = settings.lockScreenEnabled && lockMode !== 'off' && lockDuration > 0;
+
+  if (shouldLock) {
     await startLockScreen(task);
   } else {
     activePopup = { ...task };
@@ -307,7 +422,8 @@ async function startLockScreen(task) {
   invoke('timer_set_lock_screen_active', { active: true }).catch(console.error);
 
   // 使用任务级别的锁屏时长，如果没有则使用全局设置
-  const lockDuration = task.lockDuration || settings.lockDuration;
+  const lockDuration = task.lockDuration ?? settings.lockDuration;
+  const lockMode = task.lockMode || 'normal';
 
   lockScreenState = {
     active: true,
@@ -325,7 +441,8 @@ async function startLockScreen(task) {
         title: task.title,
         desc: task.desc,
         duration: lockDuration,
-        icon: task.icon
+        icon: task.icon,
+        lock_mode: lockMode,
       }
     });
   } catch (e) {
@@ -345,7 +462,11 @@ async function startLockScreen(task) {
 
     if (lockScreenState.remaining <= 0) {
       clearInterval(lockInterval);
-      showLockConfirm();
+      if (settings.lockEndRequireConfirm) {
+        showLockConfirm();
+      } else {
+        endLockScreen().catch(console.error);
+      }
     }
   }, 1000);
 }
@@ -403,6 +524,10 @@ function updateLockScreenTimer() {
   }
 }
 
+function getUnlockHoldSeconds() {
+  return lockScreenState.task?.lockMode === 'strict' ? 5 : 3;
+}
+
 function startUnlockPress() {
   if (lockScreenState.unlockTimer) return;
   
@@ -412,8 +537,9 @@ function startUnlockPress() {
   
   if (btn) btn.classList.add('pressing');
   
+  const totalSteps = getUnlockHoldSeconds() * 10; // 100ms per step
   lockScreenState.unlockTimer = setInterval(() => {
-    lockScreenState.unlockProgress += 100 / 30;
+    lockScreenState.unlockProgress += 100 / totalSteps;
     
     if (progressBar) {
       progressBar.style.width = `${lockScreenState.unlockProgress}%`;
@@ -458,7 +584,9 @@ function addTask() {
   const id = 'task_' + Date.now();
   settings.tasks.push({
     id: id, title: '新提醒', desc: '又是充满活力的一天，记得休息哦~',
-    interval: 30, enabled: true, icon: 'bell', lockDuration: 60, autoResetOnIdle: true
+    interval: 30, enabled: true, icon: 'bell',
+    lockDuration: 0, lockMode: 'off', leadSec: 0, delayOnceEnabled: false, delayOnceSec: 0,
+    autoResetOnIdle: true
   });
   countdowns[id] = 30 * 60;
   saveSettings();
@@ -474,12 +602,103 @@ function removeTask(id) {
   renderFullUI();
 }
 
+function applySyncedAlignment(changedTaskId) {
+  if (settings.scheduleMode !== 'synced') return;
+
+  const { breakTaskId, microTaskId, ratioK } = settings.syncedPair || {};
+  const k = Math.max(1, parseInt(ratioK || 1));
+  if (!breakTaskId || !microTaskId || k <= 1) return;
+
+  const breakTask = settings.tasks.find(t => t.id === breakTaskId);
+  const microTask = settings.tasks.find(t => t.id === microTaskId);
+  if (!breakTask || !microTask) return;
+
+  if (changedTaskId === microTaskId) {
+    microTask.interval = Math.max(1, parseInt(microTask.interval) || 1);
+    breakTask.interval = microTask.interval * k;
+  } else {
+    breakTask.interval = Math.max(1, parseInt(breakTask.interval) || 1);
+    const alignedMicro = Math.max(1, Math.round(breakTask.interval / k));
+    microTask.interval = alignedMicro;
+    breakTask.interval = alignedMicro * k;
+  }
+
+  countdowns[breakTaskId] = breakTask.interval * 60;
+  countdowns[microTaskId] = microTask.interval * 60;
+}
+
+function applyOfficePreset() {
+  const sit = settings.tasks.find(t => t.id === 'sit');
+  const water = settings.tasks.find(t => t.id === 'water');
+  const eye = settings.tasks.find(t => t.id === 'eye');
+
+  if (sit) {
+    Object.assign(sit, {
+      interval: 60,
+      lockDuration: 300,
+      lockMode: 'normal',
+      leadSec: 30,
+      delayOnceEnabled: true,
+      delayOnceSec: 300,
+      autoResetOnIdle: true,
+    });
+    countdowns[sit.id] = sit.interval * 60;
+  }
+
+  if (water) {
+    Object.assign(water, {
+      interval: 60,
+      lockDuration: 0,
+      lockMode: 'off',
+      leadSec: 0,
+      delayOnceEnabled: false,
+      delayOnceSec: 0,
+      autoResetOnIdle: false,
+    });
+    countdowns[water.id] = water.interval * 60;
+  }
+
+  if (eye) {
+    Object.assign(eye, {
+      interval: 20,
+      lockDuration: 20,
+      lockMode: 'normal',
+      leadSec: 10,
+      delayOnceEnabled: true,
+      delayOnceSec: 120,
+      autoResetOnIdle: true,
+    });
+    countdowns[eye.id] = eye.interval * 60;
+  }
+
+  settings.lockScreenEnabled = true;
+  settings.lockEndRequireConfirm = false;
+  settings.scheduleMode = 'synced';
+  settings.syncedPair = { breakTaskId: 'sit', microTaskId: 'eye', ratioK: 3 };
+  settings.conflictPolicy = 'priority';
+
+  saveSettings();
+  syncTasksToBackend();
+  invoke('timer_set_conflict_policy', { policy: settings.conflictPolicy }).catch(console.error);
+  invoke('set_idle_threshold', { seconds: settings.idleThreshold }).catch(console.error);
+  renderFullUI();
+}
+
 function updateTask(id, updates) {
   const task = settings.tasks.find(t => t.id === id);
   if (task) {
     Object.assign(task, updates);
     if (updates.interval !== undefined) {
+      applySyncedAlignment(id);
       countdowns[id] = task.interval * 60;
+      if (settings.scheduleMode === 'synced') {
+        const { breakTaskId, microTaskId } = settings.syncedPair || {};
+        [breakTaskId, microTaskId].filter(Boolean).forEach((tid) => {
+          const t = settings.tasks.find(x => x.id === tid);
+          const input = document.querySelector(`.interval-input[data-id="${tid}"]`);
+          if (t && input) input.value = t.interval;
+        });
+      }
     }
     saveSettings();
     // 同步到后端
@@ -537,6 +756,77 @@ function updateTrayTooltip() {
     });
   }
   invoke('update_tray_tooltip', { tooltip: lines.join('\n') }).catch(() => {});
+}
+
+function renderPrewarnUI(prewarn) {
+  const app = document.getElementById('app');
+  const delayLabel = prewarn.delaySec >= 60
+    ? `${Math.round(prewarn.delaySec / 60)} 分钟`
+    : `${prewarn.delaySec} 秒`;
+
+  app.innerHTML = `
+    <div class="prewarn-container">
+      <div class="prewarn-header">
+        <div class="prewarn-icon">${ICONS[prewarn.icon] || ICONS.bell}</div>
+        <div class="prewarn-title">${prewarn.title}</div>
+      </div>
+      <div class="prewarn-desc">${prewarn.desc}</div>
+      <div class="prewarn-countdown">
+        <span id="prewarnRemaining">${Math.max(0, prewarn.remaining || 0)}</span> 秒后开始
+      </div>
+      <div class="prewarn-actions">
+        <button class="btn btn-primary" id="prewarnStartBtn">开始</button>
+        ${prewarn.canDelay ? `<button class="btn btn-secondary" id="prewarnDelayBtn">延迟一次（${delayLabel}）</button>` : ''}
+      </div>
+    </div>
+  `;
+
+  const currentWindow = WebviewWindow.getCurrent();
+  let remaining = Math.max(0, Number(prewarn.remaining) || 0);
+
+  const closeSelf = async () => {
+    try {
+      await currentWindow.close();
+    } catch (_) {
+      // ignore
+    }
+  };
+
+  const updateRemaining = () => {
+    const el = document.getElementById('prewarnRemaining');
+    if (el) el.textContent = String(remaining);
+  };
+
+  const timer = setInterval(() => {
+    remaining -= 1;
+    updateRemaining();
+    if (remaining <= 0) {
+      clearInterval(timer);
+      closeSelf();
+    }
+  }, 1000);
+
+  document.getElementById('prewarnStartBtn')?.addEventListener('click', async () => {
+    clearInterval(timer);
+    try {
+      await invoke('timer_trigger_task_now', { taskId: prewarn.id });
+    } catch (e) {
+      console.error('Failed to trigger task now', e);
+    } finally {
+      await closeSelf();
+    }
+  });
+
+  document.getElementById('prewarnDelayBtn')?.addEventListener('click', async () => {
+    clearInterval(timer);
+    try {
+      await invoke('timer_delay_once', { taskId: prewarn.id });
+    } catch (e) {
+      console.error('Failed to delay task once', e);
+    } finally {
+      await closeSelf();
+    }
+  });
 }
 
 function updateLiveValues() {
@@ -637,20 +927,41 @@ function renderFullUI() {
               ${!['sit', 'water', 'eye'].includes(task.id) ? `<div class="remove-btn" data-id="${task.id}">${ICONS.trash}</div>` : ''}
             </div>
           </div>
-          ${settings.lockScreenEnabled ? `
           <div class="card-footer">
             <label class="footer-option" title="用户无操作超过阈值时自动重置">
               <input type="checkbox" class="idle-reset-input" data-id="${task.id}" ${task.autoResetOnIdle ? 'checked' : ''}>
               <span class="checkbox-custom"></span>
-              <span>空闲时重置</span>
+              <span>空闲重置</span>
             </label>
             <div class="footer-option">
+              <span>锁屏</span>
+              <select class="lock-mode-select" data-id="${task.id}" ${settings.lockScreenEnabled ? '' : 'disabled'}>
+                <option value="off" ${task.lockMode === 'off' ? 'selected' : ''}>关闭</option>
+                <option value="normal" ${task.lockMode === 'normal' ? 'selected' : ''}>普通</option>
+                <option value="strict" ${task.lockMode === 'strict' ? 'selected' : ''}>严格</option>
+              </select>
+            </div>
+            <div class="footer-option">
               <span>锁屏时长</span>
-              <input type="number" class="lock-input" value="${task.lockDuration || settings.lockDuration}" data-id="${task.id}" min="5" max="3600">
+              <input type="number" class="lock-input" value="${task.lockDuration ?? settings.lockDuration}" data-id="${task.id}" min="0" max="3600" ${(!settings.lockScreenEnabled || task.lockMode === 'off') ? 'disabled' : ''}>
+              <span>秒</span>
+            </div>
+            <div class="footer-option">
+              <span>预告</span>
+              <input type="number" class="lead-input" value="${task.leadSec ?? 0}" data-id="${task.id}" min="0" max="3600">
+              <span>秒</span>
+            </div>
+            <label class="footer-option" title="每轮仅允许一次">
+              <input type="checkbox" class="delay-once-input" data-id="${task.id}" ${task.delayOnceEnabled ? 'checked' : ''}>
+              <span class="checkbox-custom"></span>
+              <span>延迟一次</span>
+            </label>
+            <div class="footer-option">
+              <span>时长</span>
+              <input type="number" class="delay-input" value="${task.delayOnceSec ?? 0}" data-id="${task.id}" min="0" max="3600" ${task.delayOnceEnabled ? '' : 'disabled'}>
               <span>秒</span>
             </div>
           </div>
-          ` : ''}
         </div>
       `).join('')}
     </div>
@@ -670,6 +981,38 @@ function renderFullUI() {
           <span class="setting-desc">提醒时锁定屏幕，确保真正休息</span>
         </div>
         <div class="toggle ${settings.lockScreenEnabled ? 'active' : ''}" id="lockToggle"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label>锁屏结束手动确认</label>
+          <span class="setting-desc">开启后倒计时结束需点击确认；关闭则自动结束</span>
+        </div>
+        <div class="toggle ${settings.lockEndRequireConfirm ? 'active' : ''}" id="lockConfirmToggle"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label>联动模式（护眼×久坐）</label>
+          <span class="setting-desc">按整数倍对齐，减少重叠/接连提醒</span>
+        </div>
+        <div class="toggle ${settings.scheduleMode === 'synced' ? 'active' : ''}" id="syncedToggle"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label>冲突处理</label>
+          <span class="setting-desc">多个任务同一时刻到点时</span>
+        </div>
+        <select class="setting-select" id="conflictPolicySelect">
+          <option value="priority" ${settings.conflictPolicy === 'priority' ? 'selected' : ''}>仅触发优先级最高</option>
+          <option value="merge" ${settings.conflictPolicy === 'merge' ? 'selected' : ''}>合并提示</option>
+          <option value="defer" ${settings.conflictPolicy === 'defer' ? 'selected' : ''}>顺延补一次</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label>办公科学默认</label>
+          <span class="setting-desc">一键应用推荐参数</span>
+        </div>
+        <button class="preset-btn" id="officePresetBtn">应用</button>
       </div>
       <div class="setting-row">
         <div class="setting-info">
@@ -755,7 +1098,7 @@ function renderFullUI() {
           <div class="unlock-progress"></div>
           <div class="unlock-text">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
-            长按 3 秒紧急解锁
+            长按 ${getUnlockHoldSeconds()} 秒紧急解锁
           </div>
         </button>
         `}
@@ -814,6 +1157,19 @@ function bindEvents() {
       } else if (el.id === 'lockToggle') {
         settings.lockScreenEnabled = !settings.lockScreenEnabled;
         el.classList.toggle('active', settings.lockScreenEnabled);
+        saveSettings();
+        renderFullUI();
+      } else if (el.id === 'lockConfirmToggle') {
+        settings.lockEndRequireConfirm = !settings.lockEndRequireConfirm;
+        el.classList.toggle('active', settings.lockEndRequireConfirm);
+        saveSettings();
+      } else if (el.id === 'syncedToggle') {
+        settings.scheduleMode = settings.scheduleMode === 'synced' ? 'independent' : 'synced';
+        el.classList.toggle('active', settings.scheduleMode === 'synced');
+        if (settings.scheduleMode === 'synced') {
+          applySyncedAlignment(settings.syncedPair?.breakTaskId);
+          syncTasksToBackend();
+        }
         saveSettings();
         renderFullUI();
       }
@@ -883,12 +1239,60 @@ function bindEvents() {
       const id = el.dataset.id;
       const task = settings.tasks.find(t => t.id === id);
       const val = parseInt(e.target.value);
-      if (task && val >= 5) {
+      if (task && Number.isFinite(val) && val >= 0) {
         task.lockDuration = val;
         saveSettings();
       }
     });
   });
+
+  document.querySelectorAll('.lock-mode-select').forEach(el => {
+    el.addEventListener('change', (e) => {
+      updateTask(el.dataset.id, { lockMode: e.target.value });
+      renderFullUI();
+    });
+  });
+
+  document.querySelectorAll('.lead-input').forEach(el => {
+    el.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      if (Number.isFinite(val) && val >= 0) {
+        updateTask(el.dataset.id, { leadSec: val });
+      }
+    });
+  });
+
+  document.querySelectorAll('.delay-once-input').forEach(el => {
+    el.addEventListener('change', (e) => {
+      updateTask(el.dataset.id, { delayOnceEnabled: e.target.checked });
+      renderFullUI();
+    });
+  });
+
+  document.querySelectorAll('.delay-input').forEach(el => {
+    el.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      if (Number.isFinite(val) && val >= 0) {
+        updateTask(el.dataset.id, { delayOnceSec: val });
+      }
+    });
+  });
+
+  const conflictSelect = document.getElementById('conflictPolicySelect');
+  if (conflictSelect) {
+    conflictSelect.addEventListener('change', async (e) => {
+      settings.conflictPolicy = e.target.value;
+      saveSettings();
+      await invoke('timer_set_conflict_policy', { policy: settings.conflictPolicy }).catch(console.error);
+    });
+  }
+
+  const officePresetBtn = document.getElementById('officePresetBtn');
+  if (officePresetBtn) {
+    officePresetBtn.addEventListener('click', () => {
+      applyOfficePreset();
+    });
+  }
 
   document.getElementById('addTaskBtn').onclick = addTask;
   document.getElementById('pauseBtn').onclick = togglePause;

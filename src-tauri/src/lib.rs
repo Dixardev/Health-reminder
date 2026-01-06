@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::thread;
@@ -138,14 +138,41 @@ pub struct TaskConfig {
     pub icon: String,
     #[serde(default)]
     pub auto_reset_on_idle: bool,  // 空闲时自动重置
+    #[serde(default)]
+    pub lead_sec: u64,  // 锁屏前预告（秒）
+    #[serde(default)]
+    pub delay_once_enabled: bool,  // 延迟一次
+    #[serde(default)]
+    pub delay_once_sec: u64,  // 延迟时长（秒）
+    #[serde(default)]
+    pub priority: i32,  // 冲突处理优先级（高优）
 }
 
 #[derive(Clone, Debug)]
 struct TaskTimer {
     config: TaskConfig,
     reset_time: Instant,
-    triggered: bool,  // 本轮是否已触发
     disabled_at: Option<Instant>,  // 禁用时的时间点，用于计算暂停时长
+    delay_offset_sec: u64,  // 本轮额外延迟（秒）
+    delay_used: bool,       // 本轮是否已使用“延迟一次”
+    lead_shown: bool,       // 本轮是否已弹出“预告”
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ConflictPolicy {
+    Priority,
+    Merge,
+    Defer,
+}
+
+impl ConflictPolicy {
+    fn from_str(value: &str) -> Self {
+        match value {
+            "merge" => Self::Merge,
+            "defer" => Self::Defer,
+            _ => Self::Priority,
+        }
+    }
 }
 
 struct TimerState {
@@ -155,6 +182,8 @@ struct TimerState {
     system_locked: bool,
     lock_screen_active: bool,
     lock_screen_start: Option<Instant>,  // 锁屏开始时间，用于补偿
+    conflict_policy: ConflictPolicy,
+    deferred_triggers: Vec<String>,
     // 空闲检测相关
     idle_threshold_seconds: u64,  // 空闲阈值（秒），默认 300 秒 = 5 分钟
     is_idle: bool,  // 当前是否处于空闲状态
@@ -170,6 +199,8 @@ impl TimerState {
             system_locked: false,
             lock_screen_active: false,
             lock_screen_start: None,
+            conflict_policy: ConflictPolicy::Priority,
+            deferred_triggers: Vec::new(),
             idle_threshold_seconds: 300,  // 默认 5 分钟
             is_idle: false,
             idle_start: None,
@@ -268,6 +299,70 @@ struct LockTaskArgs {
     desc: String,
     duration: i32,
     icon: String,
+    #[serde(default)]
+    lock_mode: Option<String>, // normal | strict
+}
+
+static LOCK_WATCHDOG_SEQ: AtomicU64 = AtomicU64::new(0);
+static LOCK_WATCHDOG_TOKEN: AtomicU64 = AtomicU64::new(0);
+
+fn stop_lock_watchdog() {
+    LOCK_WATCHDOG_TOKEN.store(0, Ordering::SeqCst);
+}
+
+fn start_lock_watchdog(app: AppHandle, strict: bool) {
+    let token = LOCK_WATCHDOG_SEQ.fetch_add(1, Ordering::SeqCst) + 1;
+    LOCK_WATCHDOG_TOKEN.store(token, Ordering::SeqCst);
+
+    thread::spawn(move || {
+        let tick = if strict {
+            Duration::from_millis(250)
+        } else {
+            Duration::from_millis(500)
+        };
+
+        while LOCK_WATCHDOG_TOKEN.load(Ordering::SeqCst) == token {
+            thread::sleep(tick);
+
+            let mut windows: Vec<tauri::WebviewWindow> = Vec::new();
+
+            if let Some(w) = app.get_webview_window("main") {
+                windows.push(w);
+            }
+
+            let lock_labels = {
+                let lock_state = app.state::<LockState>();
+                let labels = lock_state.0.lock().unwrap().clone();
+                labels
+            };
+
+            for label in lock_labels {
+                if let Some(w) = app.get_webview_window(&label) {
+                    windows.push(w);
+                }
+            }
+
+            for window in windows {
+                let is_minimized = window.is_minimized().unwrap_or(false);
+                let is_fullscreen = window.is_fullscreen().unwrap_or(false);
+
+                if is_minimized {
+                    let _ = window.unminimize();
+                }
+
+                if !is_fullscreen {
+                    let _ = window.set_fullscreen(true);
+                }
+
+                let _ = window.set_always_on_top(true);
+
+                if strict || is_minimized || !is_fullscreen {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        }
+    });
 }
 
 // ============= 定时器命令 =============
@@ -286,6 +381,18 @@ struct TaskTriggeredPayload {
     title: String,
     desc: String,
     icon: String,
+}
+
+#[derive(Clone, serde::Serialize)]
+struct TaskLeadPayload {
+    id: String,
+    title: String,
+    desc: String,
+    icon: String,
+    lead_sec: u64,
+    remaining: u64,
+    can_delay: bool,
+    delay_sec: u64,
 }
 
 #[tauri::command]
@@ -310,8 +417,10 @@ fn sync_tasks(tasks: Vec<TaskConfig>) {
                 new_tasks.insert(task.id.clone(), TaskTimer {
                     config: task,
                     reset_time: now,
-                    triggered: false,
                     disabled_at: None,
+                    delay_offset_sec: 0,
+                    delay_used: false,
+                    lead_shown: false,
                 });
             } else if was_disabled && is_now_enabled {
                 // 从禁用变为启用，补偿禁用期间的时间
@@ -323,24 +432,30 @@ fn sync_tasks(tasks: Vec<TaskConfig>) {
                 new_tasks.insert(task.id.clone(), TaskTimer {
                     config: task,
                     reset_time: new_reset_time,
-                    triggered: existing.triggered,
                     disabled_at: None,
+                    delay_offset_sec: existing.delay_offset_sec,
+                    delay_used: existing.delay_used,
+                    lead_shown: existing.lead_shown,
                 });
             } else if was_enabled && is_now_disabled {
                 // 从启用变为禁用，记录禁用时间点
                 new_tasks.insert(task.id.clone(), TaskTimer {
                     config: task,
                     reset_time: existing.reset_time,
-                    triggered: existing.triggered,
                     disabled_at: Some(now),
+                    delay_offset_sec: existing.delay_offset_sec,
+                    delay_used: existing.delay_used,
+                    lead_shown: existing.lead_shown,
                 });
             } else {
                 // 状态没变，保留
                 new_tasks.insert(task.id.clone(), TaskTimer {
                     config: task,
                     reset_time: existing.reset_time,
-                    triggered: existing.triggered,
                     disabled_at: existing.disabled_at,
+                    delay_offset_sec: existing.delay_offset_sec,
+                    delay_used: existing.delay_used,
+                    lead_shown: existing.lead_shown,
                 });
             }
         } else {
@@ -348,13 +463,89 @@ fn sync_tasks(tasks: Vec<TaskConfig>) {
             new_tasks.insert(task.id.clone(), TaskTimer {
                 config: task.clone(),
                 reset_time: now,
-                triggered: false,
                 disabled_at: if task.enabled { None } else { Some(now) },
+                delay_offset_sec: 0,
+                delay_used: false,
+                lead_shown: false,
             });
         }
     }
 
     state.tasks = new_tasks;
+}
+
+#[tauri::command]
+fn timer_set_conflict_policy(policy: String) {
+    let mut state = get_timer_state().lock().unwrap();
+    state.conflict_policy = ConflictPolicy::from_str(policy.trim());
+}
+
+#[tauri::command]
+fn timer_delay_once(task_id: String) -> Result<(), String> {
+    let mut state = get_timer_state().lock().unwrap();
+    let timer = state
+        .tasks
+        .get_mut(&task_id)
+        .ok_or_else(|| format!("task not found: {}", task_id))?;
+
+    if !timer.config.enabled {
+        return Err("task disabled".into());
+    }
+
+    if !timer.config.delay_once_enabled || timer.config.delay_once_sec == 0 {
+        return Err("delay_once not enabled".into());
+    }
+
+    if timer.delay_used {
+        return Err("delay already used".into());
+    }
+
+    timer.delay_offset_sec = timer
+        .delay_offset_sec
+        .saturating_add(timer.config.delay_once_sec);
+    timer.delay_used = true;
+    timer.lead_shown = false; // 允许在新的到点前再次预告
+
+    Ok(())
+}
+
+#[tauri::command]
+fn timer_trigger_task_now(app: tauri::AppHandle, task_id: String) -> Result<(), String> {
+    let task_payload = {
+        let mut state = get_timer_state().lock().unwrap();
+
+        if state.paused || state.system_locked || state.lock_screen_active {
+            return Err("timer busy".into());
+        }
+
+        let now = Instant::now();
+        let timer = state
+            .tasks
+            .get_mut(&task_id)
+            .ok_or_else(|| format!("task not found: {}", task_id))?;
+
+        if !timer.config.enabled {
+            return Err("task disabled".into());
+        }
+
+        let payload = TaskTriggeredPayload {
+            id: timer.config.id.clone(),
+            title: timer.config.title.clone(),
+            desc: timer.config.desc.clone(),
+            icon: timer.config.icon.clone(),
+        };
+
+        // 视为已经触发，开始下一轮计时
+        timer.reset_time = now;
+        timer.delay_offset_sec = 0;
+        timer.delay_used = false;
+        timer.lead_shown = false;
+
+        payload
+    };
+
+    let _ = app.emit("task-triggered", task_payload);
+    Ok(())
 }
 
 #[tauri::command]
@@ -388,7 +579,9 @@ fn timer_reset_task(task_id: String) {
     let now = Instant::now();
     if let Some(timer) = state.tasks.get_mut(&task_id) {
         timer.reset_time = now;
-        timer.triggered = false;
+        timer.delay_offset_sec = 0;
+        timer.delay_used = false;
+        timer.lead_shown = false;
         // 如果任务禁用，也更新 disabled_at
         if timer.disabled_at.is_some() {
             timer.disabled_at = Some(now);
@@ -402,7 +595,9 @@ fn timer_reset_all() {
     let now = Instant::now();
     for timer in state.tasks.values_mut() {
         timer.reset_time = now;
-        timer.triggered = false;
+        timer.delay_offset_sec = 0;
+        timer.delay_used = false;
+        timer.lead_shown = false;
         // 如果任务禁用，也更新 disabled_at
         if timer.disabled_at.is_some() {
             timer.disabled_at = Some(now);
@@ -416,7 +611,7 @@ fn get_countdowns() -> Vec<CountdownInfo> {
     let now = Instant::now();
 
     state.tasks.values().map(|timer| {
-        let total_secs = timer.config.interval * 60;
+        let total_secs = timer.config.interval * 60 + timer.delay_offset_sec;
 
         // 如果任务被禁用，使用禁用时间点计算 elapsed，这样时间就"冻结"了
         let effective_now = if let Some(disabled_at) = timer.disabled_at {
@@ -456,7 +651,9 @@ fn timer_set_system_locked(locked: bool) {
             if timer.config.auto_reset_on_idle {
                 // 勾选了"空闲重置"，直接重置为初始值
                 timer.reset_time = now;
-                timer.triggered = false;
+                timer.delay_offset_sec = 0;
+                timer.delay_used = false;
+                timer.lead_shown = false;
             } else if let Some(duration) = pause_duration {
                 // 没有勾选，补偿暂停时间
                 timer.reset_time += duration;
@@ -471,22 +668,48 @@ fn timer_set_system_locked(locked: bool) {
 }
 
 #[tauri::command]
-fn timer_set_lock_screen_active(active: bool) {
-    let mut state = get_timer_state().lock().unwrap();
-    if active && !state.lock_screen_active {
-        // 刚进入锁屏模式，记录开始时间
-        state.lock_screen_active = true;
-        state.lock_screen_start = Some(Instant::now());
-    } else if !active && state.lock_screen_active {
-        // 退出锁屏模式，补偿锁屏期间的时间
-        if let Some(lock_start) = state.lock_screen_start {
-            let lock_duration = lock_start.elapsed();
-            for timer in state.tasks.values_mut() {
-                timer.reset_time += lock_duration;
+fn timer_set_lock_screen_active(app: tauri::AppHandle, active: bool) {
+    let mut deferred_to_emit: Vec<TaskTriggeredPayload> = Vec::new();
+
+    {
+        let mut state = get_timer_state().lock().unwrap();
+        if active && !state.lock_screen_active {
+            // 刚进入锁屏模式，记录开始时间
+            state.lock_screen_active = true;
+            state.lock_screen_start = Some(Instant::now());
+        } else if !active && state.lock_screen_active {
+            // 退出锁屏模式，补偿锁屏期间的时间
+            if let Some(lock_start) = state.lock_screen_start {
+                let lock_duration = lock_start.elapsed();
+                for timer in state.tasks.values_mut() {
+                    timer.reset_time += lock_duration;
+                }
+            }
+
+            state.lock_screen_active = false;
+            state.lock_screen_start = None;
+
+            // 如果有“顺延”任务，锁屏结束后立刻补一次
+            if !state.deferred_triggers.is_empty() {
+                let ids: Vec<String> = state.deferred_triggers.drain(..).collect();
+                for id in ids {
+                    if let Some(timer) = state.tasks.get(&id) {
+                        if timer.config.enabled {
+                            deferred_to_emit.push(TaskTriggeredPayload {
+                                id: timer.config.id.clone(),
+                                title: timer.config.title.clone(),
+                                desc: timer.config.desc.clone(),
+                                icon: timer.config.icon.clone(),
+                            });
+                        }
+                    }
+                }
             }
         }
-        state.lock_screen_active = false;
-        state.lock_screen_start = None;
+    }
+
+    for task in deferred_to_emit {
+        let _ = app.emit("task-triggered", task);
     }
 }
 
@@ -515,14 +738,10 @@ fn start_timer_thread(app_handle: AppHandle) {
             thread::sleep(Duration::from_secs(1));
 
             let mut tasks_to_trigger: Vec<TaskTriggeredPayload> = Vec::new();
-            let mut idle_status_changed = false;
-            let mut current_idle_status = IdleStatus {
-                is_idle: false,
-                idle_seconds: 0,
-                threshold: 300,
-            };
+            let mut tasks_to_lead: Vec<TaskLeadPayload> = Vec::new();
+            let mut deferred_to_trigger: Vec<TaskTriggeredPayload> = Vec::new();
 
-            {
+            let idle_status_payload = {
                 let mut state = get_timer_state().lock().unwrap();
 
                 // 如果暂停、系统锁屏或锁屏模式激活，跳过检查
@@ -535,6 +754,7 @@ fn start_timer_thread(app_handle: AppHandle) {
                 let threshold = state.idle_threshold_seconds;
                 let was_idle = state.is_idle;
                 let is_now_idle = idle_seconds >= threshold;
+                let mut idle_status_changed = false;
 
                 // 检测空闲状态变化
                 if is_now_idle && !was_idle {
@@ -547,7 +767,9 @@ fn start_timer_thread(app_handle: AppHandle) {
                     for timer in state.tasks.values_mut() {
                         if timer.config.auto_reset_on_idle && timer.config.enabled {
                             timer.reset_time = now;
-                            timer.triggered = false;
+                            timer.delay_offset_sec = 0;
+                            timer.delay_used = false;
+                            timer.lead_shown = false;
                         }
                     }
                 } else if !is_now_idle && was_idle {
@@ -558,7 +780,9 @@ fn start_timer_thread(app_handle: AppHandle) {
                     for timer in state.tasks.values_mut() {
                         if timer.config.auto_reset_on_idle && timer.config.enabled {
                             timer.reset_time = now;
-                            timer.triggered = false;
+                            timer.delay_offset_sec = 0;
+                            timer.delay_used = false;
+                            timer.lead_shown = false;
                         }
                     }
 
@@ -566,7 +790,7 @@ fn start_timer_thread(app_handle: AppHandle) {
                     idle_status_changed = true;
                 }
 
-                current_idle_status = IdleStatus {
+                let status = IdleStatus {
                     is_idle: state.is_idle,
                     idle_seconds,
                     threshold,
@@ -576,30 +800,133 @@ fn start_timer_thread(app_handle: AppHandle) {
                 if state.is_idle {
                     // 空闲时不触发任何任务，但仍然发送倒计时更新
                 } else {
-                    // 正常检查任务触发
+                    // 先处理上一次冲突产生的“顺延”
+                    if !state.deferred_triggers.is_empty() {
+                        let deferred_ids: Vec<String> = state.deferred_triggers.drain(..).collect();
+                        for id in deferred_ids {
+                            if let Some(timer) = state.tasks.get(&id) {
+                                if timer.config.enabled {
+                                    deferred_to_trigger.push(TaskTriggeredPayload {
+                                        id: timer.config.id.clone(),
+                                        title: timer.config.title.clone(),
+                                        desc: timer.config.desc.clone(),
+                                        icon: timer.config.icon.clone(),
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    #[derive(Clone)]
+                    struct DueTask {
+                        payload: TaskTriggeredPayload,
+                        priority: i32,
+                    }
+
+                    let mut due_tasks: Vec<DueTask> = Vec::new();
+
+                    // 正常检查任务触发 & 预告
                     for timer in state.tasks.values_mut() {
-                        if !timer.config.enabled || timer.triggered {
+                        if !timer.config.enabled {
                             continue;
                         }
 
                         let elapsed = now.duration_since(timer.reset_time).as_secs();
-                        let total_secs = timer.config.interval * 60;
+                        let total_secs = timer.config.interval * 60 + timer.delay_offset_sec;
+                        let remaining = if elapsed >= total_secs { 0 } else { total_secs - elapsed };
 
-                        if elapsed >= total_secs {
-                            // 触发提醒
-                            tasks_to_trigger.push(TaskTriggeredPayload {
+                        if timer.config.lead_sec > 0
+                            && remaining == timer.config.lead_sec
+                            && !timer.lead_shown
+                        {
+                            let can_delay = timer.config.delay_once_enabled
+                                && timer.config.delay_once_sec > 0
+                                && !timer.delay_used;
+
+                            tasks_to_lead.push(TaskLeadPayload {
                                 id: timer.config.id.clone(),
                                 title: timer.config.title.clone(),
                                 desc: timer.config.desc.clone(),
                                 icon: timer.config.icon.clone(),
+                                lead_sec: timer.config.lead_sec,
+                                remaining,
+                                can_delay,
+                                delay_sec: timer.config.delay_once_sec,
+                            });
+                            timer.lead_shown = true;
+                        }
+
+                        if elapsed >= total_secs {
+                            due_tasks.push(DueTask {
+                                payload: TaskTriggeredPayload {
+                                    id: timer.config.id.clone(),
+                                    title: timer.config.title.clone(),
+                                    desc: timer.config.desc.clone(),
+                                    icon: timer.config.icon.clone(),
+                                },
+                                priority: timer.config.priority,
                             });
 
-                            // 重置计时，开始下一轮
+                            // 视为已触发，开始下一轮
                             timer.reset_time = now;
-                            timer.triggered = false;
+                            timer.delay_offset_sec = 0;
+                            timer.delay_used = false;
+                            timer.lead_shown = false;
+                        }
+                    }
+
+                    if !due_tasks.is_empty() {
+                        due_tasks.sort_by(|a, b| {
+                            b.priority
+                                .cmp(&a.priority)
+                                .then_with(|| a.payload.id.cmp(&b.payload.id))
+                        });
+
+                        let policy = state.conflict_policy;
+                        let mut chosen = due_tasks[0].payload.clone();
+
+                        match policy {
+                            ConflictPolicy::Priority => {
+                                tasks_to_trigger.push(chosen);
+                            }
+                            ConflictPolicy::Merge => {
+                                let others: Vec<String> = due_tasks
+                                    .iter()
+                                    .skip(1)
+                                    .map(|t| t.payload.title.clone())
+                                    .collect();
+                                if !others.is_empty() {
+                                    chosen.desc = format!(
+                                        "{}\n\n同时到点：{}",
+                                        chosen.desc,
+                                        others.join("、")
+                                    );
+                                }
+                                tasks_to_trigger.push(chosen);
+                            }
+                            ConflictPolicy::Defer => {
+                                tasks_to_trigger.push(chosen);
+                                for other in due_tasks.iter().skip(1) {
+                                    state.deferred_triggers.push(other.payload.id.clone());
+                                }
+                            }
                         }
                     }
                 }
+
+                if idle_status_changed {
+                    Some(status)
+                } else {
+                    None
+                }
+            };
+
+            // 将 deferred 放在当前 tick 的最后发出（更符合“顺延”）
+            tasks_to_trigger.extend(deferred_to_trigger);
+
+            // 发送预告事件到前端
+            for task in tasks_to_lead {
+                let _ = app_handle.emit("task-lead", task);
             }
 
             // 发送触发事件到前端
@@ -607,9 +934,9 @@ fn start_timer_thread(app_handle: AppHandle) {
                 let _ = app_handle.emit("task-triggered", task);
             }
 
-            // 发送空闲状态更新（只在状态变化时发送，或每 5 秒发送一次状态）
-            if idle_status_changed {
-                let _ = app_handle.emit("idle-status-changed", current_idle_status.clone());
+            // 发送空闲状态更新（只在状态变化时发送）
+            if let Some(status) = idle_status_payload {
+                let _ = app_handle.emit("idle-status-changed", status);
             }
 
             // 每秒发送倒计时更新
@@ -724,11 +1051,26 @@ fn update_pause_menu(state: State<PauseMenuState>, paused: bool) {
 
 #[tauri::command]
 async fn enter_lock_mode(app: tauri::AppHandle, window: tauri::Window, state: State<'_, LockState>, task: Option<LockTaskArgs>) -> Result<(), String> {
+    stop_lock_watchdog();
+
+    let lock_mode = task
+        .as_ref()
+        .and_then(|t| t.lock_mode.as_deref())
+        .unwrap_or("normal");
+    let strict = lock_mode == "strict";
+
+    let _ = window.show();
+    let _ = window.set_focus();
     let _ = window.set_fullscreen(true);
     let _ = window.set_always_on_top(true);
     let _ = window.set_closable(false);
     let _ = window.set_minimizable(false);
-    let _ = window.set_focus();
+
+    if strict {
+        let _ = window.set_decorations(false);
+        let _ = window.set_resizable(false);
+        let _ = window.set_maximizable(false);
+    }
 
     let monitors = window.available_monitors().unwrap_or_default();
     let current_monitor = window.current_monitor().unwrap_or(None);
@@ -779,13 +1121,22 @@ async fn enter_lock_mode(app: tauri::AppHandle, window: tauri::Window, state: St
     let mut state_guard = state.0.lock().unwrap();
     state_guard.extend(created_windows);
 
+    if strict {
+        start_lock_watchdog(app.clone(), true);
+    }
+
     Ok(())
 }
 
 #[tauri::command]
 fn exit_lock_mode(app: tauri::AppHandle, window: tauri::Window, state: State<LockState>) {
+    stop_lock_watchdog();
+
     let _ = window.set_fullscreen(false);
     let _ = window.set_always_on_top(false);
+    let _ = window.set_decorations(true);
+    let _ = window.set_resizable(false);
+    let _ = window.set_maximizable(false);
     let _ = window.set_closable(true);
     let _ = window.set_minimizable(true);
 
@@ -820,6 +1171,9 @@ pub fn run() {
             enter_lock_mode,
             exit_lock_mode,
             sync_tasks,
+            timer_set_conflict_policy,
+            timer_delay_once,
+            timer_trigger_task_now,
             timer_pause,
             timer_resume,
             timer_reset_task,
@@ -892,12 +1246,20 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
-                // If the window is a lock slave, just close it (don't prevent close)
-                // The label check: main window has label "main" (default).
-                // Slave windows have "lock-slave-X".
+                let lock_active = get_timer_state().lock().unwrap().lock_screen_active;
+
+                // 主窗口默认关闭即隐藏；但锁屏期间禁止关闭/隐藏
                 if window.label() == "main" {
                     api.prevent_close();
-                    let _ = window.hide();
+                    if !lock_active {
+                        let _ = window.hide();
+                    }
+                    return;
+                }
+
+                // 锁屏从属窗口：锁屏期间禁止被关闭（Alt+F4 等）
+                if lock_active && window.label().starts_with("lock-slave-") {
+                    api.prevent_close();
                 }
             }
         })

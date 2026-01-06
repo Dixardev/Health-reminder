@@ -248,7 +248,9 @@ body {
 .card-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px 14px;
   padding: 10px 20px;
   background: var(--bg-card);
   border-top: 1px solid var(--border);
@@ -303,6 +305,42 @@ body {
   font-size: 0.75rem;
   color: var(--text);
   text-align: center;
+}
+
+.footer-option .lead-input,
+.footer-option .delay-input {
+  width: 48px;
+  padding: 4px 6px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--text);
+  text-align: center;
+}
+
+.footer-option .lock-mode-select {
+  padding: 4px 6px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--text);
+}
+
+.footer-option .lead-input:focus,
+.footer-option .delay-input:focus,
+.footer-option .lock-mode-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.footer-option .lock-input:disabled,
+.footer-option .lead-input:disabled,
+.footer-option .delay-input:disabled,
+.footer-option .lock-mode-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .footer-option .lock-input:focus {
@@ -1040,4 +1078,67 @@ body {
 .input-unit {
   font-size: 0.875rem;
   color: var(--text-muted);
+}
+
+.setting-select {
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+.setting-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+}
+
+/* 预告窗口 */
+.prewarn-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+.prewarn-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.prewarn-icon {
+  color: var(--primary);
+  height: 24px;
+}
+
+.prewarn-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.prewarn-desc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.prewarn-countdown {
+  font-size: 0.875rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.prewarn-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
