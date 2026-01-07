@@ -1,6 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import { requestPermission } from '@tauri-apps/plugin-notification';
 import { check } from '@tauri-apps/plugin-updater';
@@ -22,8 +21,8 @@ const ICONS = {
 
 const DEFAULT_TASKS = [
   { id: 'sit', title: '久坐提醒', desc: '该起来活动了，走动一下吧~', interval: 45, enabled: true, icon: 'sit', lockDuration: 60, lockMode: 'normal', leadSec: 30, delayOnceEnabled: true, delayOnceSec: 300, autoResetOnIdle: true },
-  { id: 'water', title: '喝水提醒', desc: '该喝口水了，保持水分充足~', interval: 60, enabled: true, icon: 'water', lockDuration: 60, lockMode: 'off', leadSec: 0, delayOnceEnabled: false, delayOnceSec: 0, autoResetOnIdle: true },
-  { id: 'eye', title: '护眼提醒', desc: '让眼睛休息一下，看看远处~', interval: 20, enabled: true, icon: 'eye', lockDuration: 60, lockMode: 'normal', leadSec: 10, delayOnceEnabled: true, delayOnceSec: 120, autoResetOnIdle: true }
+  { id: 'water', title: '喝水提醒', desc: '该喝口水了，保持水分充足~', interval: 60, enabled: true, icon: 'water', lockDuration: 0, lockMode: 'gentle', leadSec: 0, delayOnceEnabled: false, delayOnceSec: 0, autoResetOnIdle: true },
+  { id: 'eye', title: '护眼提醒', desc: '让眼睛休息一下，看看远处~', interval: 20, enabled: true, icon: 'eye', lockDuration: 20, lockMode: 'normal', leadSec: 10, delayOnceEnabled: true, delayOnceSec: 120, autoResetOnIdle: true }
 ];
 
 let settings = {
@@ -62,6 +61,11 @@ let updateInfo = null;
 let isUpdating = false;
 let isCheckingUpdate = false;
 let updateMessage = null;
+let runtimeMode = 'main'; // main | lock | prewarn
+const uiState = {
+  advancedSettingsOpen: false,
+  taskSettingsOpen: {},
+};
 
 // 同步任务配置到后端
 async function syncTasksToBackend() {
@@ -90,46 +94,70 @@ async function syncTasksToBackend() {
 
 async function init() {
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('mode') === 'lock_slave') {
-    const task = {
-      title: urlParams.get('title') || '休息时间',
-      desc: urlParams.get('desc') || '让眼睛休息一下',
-      icon: urlParams.get('icon') || 'eye',
-      id: 'slave_lock'
-    };
-    const duration = parseInt(urlParams.get('duration') || '10');
+  const mode = urlParams.get('mode') || 'main';
 
-    settings.lockDuration = duration;
+  if (mode === 'lock' || mode === 'lock_slave') {
+    runtimeMode = 'lock';
+
+    const duration = parseInt(urlParams.get('duration') || '10');
+    const task = {
+      id: urlParams.get('id') || 'lock_task',
+      title: urlParams.get('title') || '休息时间',
+      desc: urlParams.get('desc') || '让身体和眼睛休息一下吧~',
+      icon: urlParams.get('icon') || 'eye',
+      lockMode: (urlParams.get('lock_mode') || 'normal'),
+      lockDuration: duration,
+    };
+    const role = urlParams.get('role') || (mode === 'lock_slave' ? 'slave' : 'master');
+    const requireConfirm = urlParams.get('require_confirm') === '1' || urlParams.get('require_confirm') === 'true';
+    const allowUnlock = role === 'master' && task.lockMode !== 'strict';
 
     lockScreenState = {
       active: true,
       remaining: duration,
-      task: task,
+      task,
+      role,
+      requireConfirm,
       unlockProgress: 0,
       unlockTimer: null,
       waitingConfirm: false,
     };
 
-    renderFullUI();
-
-    // 隐藏从属屏幕的解锁按钮
-    setTimeout(() => {
-      const btn = document.querySelector('.unlock-btn');
-      if (btn) btn.style.display = 'none';
-    }, 0);
+    renderLockOnlyUI({ allowUnlock });
+    bindLockEvents({ allowUnlock });
 
     const lockInterval = setInterval(() => {
+      if (!lockScreenState.active) {
+        clearInterval(lockInterval);
+        return;
+      }
+
       lockScreenState.remaining--;
       updateLockScreenTimer();
       if (lockScreenState.remaining <= 0) {
+        lockScreenState.remaining = 0;
         clearInterval(lockInterval);
+
+        if (role !== 'master') {
+          renderLockOnlyUI({ allowUnlock: false });
+          return;
+        }
+
+        if (requireConfirm) {
+          lockScreenState.waitingConfirm = true;
+          renderLockOnlyUI({ allowUnlock: false });
+          bindLockEvents({ allowUnlock: false });
+        } else {
+          finishLockSession().catch(console.error);
+        }
       }
     }, 1000);
 
     return;
   }
 
-  if (urlParams.get('mode') === 'prewarn') {
+  if (mode === 'prewarn') {
+    runtimeMode = 'prewarn';
     const prewarn = {
       id: urlParams.get('id') || '',
       title: urlParams.get('title') || '即将开始',
@@ -143,6 +171,8 @@ async function init() {
     renderPrewarnUI(prewarn);
     return;
   }
+
+  runtimeMode = 'main';
  
   await loadSettings();
 
@@ -320,10 +350,12 @@ async function loadSettings() {
   } else {
     settings.tasks = settings.tasks.map((task) => {
       const defaults = DEFAULT_TASKS.find(d => d.id === task.id) || {};
+      const rawMode = task.lockMode ?? defaults.lockMode ?? 'gentle';
+      const lockMode = rawMode === 'off' ? 'gentle' : rawMode;
       return {
         ...defaults,
         ...task,
-        lockMode: task.lockMode ?? defaults.lockMode ?? 'off',
+        lockMode,
         leadSec: task.leadSec ?? defaults.leadSec ?? 0,
         delayOnceEnabled: task.delayOnceEnabled ?? defaults.delayOnceEnabled ?? false,
         delayOnceSec: task.delayOnceSec ?? defaults.delayOnceSec ?? 0,
@@ -356,47 +388,11 @@ function saveStats() {
 // tick 函数已移至 Rust 后端，不再需要前端定时器
 
 async function openPrewarnWindow(lead) {
-  const label = `prewarn-${lead.id}`;
-
   try {
-    const existing = await WebviewWindow.getByLabel(label);
-    if (existing) {
-      await existing.setFocus();
-      return;
-    }
-  } catch (_) {
-    // ignore
+    await invoke('open_prewarn_window', { lead });
+  } catch (e) {
+    console.error('Failed to open prewarn window', e);
   }
-
-  const params = new URLSearchParams({
-    mode: 'prewarn',
-    id: lead.id,
-    title: lead.title,
-    desc: lead.desc,
-    icon: lead.icon,
-    remaining: String(lead.remaining ?? 0),
-    lead_sec: String(lead.lead_sec ?? 0),
-    can_delay: lead.can_delay ? '1' : '0',
-    delay_sec: String(lead.delay_sec ?? 0),
-  });
-
-  const url = `index.html?${params.toString()}`;
-
-  const win = new WebviewWindow(label, {
-    url,
-    title: '即将开始',
-    width: 360,
-    height: 200,
-    resizable: false,
-    decorations: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    center: true,
-  });
-
-  win.once('tauri://error', (e) => {
-    console.error('Failed to create prewarn window', e);
-  });
 }
 
 async function triggerNotification(task) {
@@ -406,8 +402,8 @@ async function triggerNotification(task) {
   invoke('show_notification', { title: task.title, body: task.desc }).catch(console.error);
 
   const lockDuration = task.lockDuration ?? settings.lockDuration;
-  const lockMode = task.lockMode || 'off';
-  const shouldLock = settings.lockScreenEnabled && lockMode !== 'off' && lockDuration > 0;
+  const lockMode = task.lockMode || 'gentle';
+  const shouldLock = settings.lockScreenEnabled && (lockMode === 'normal' || lockMode === 'strict') && lockDuration > 0;
 
   if (shouldLock) {
     await startLockScreen(task);
@@ -418,57 +414,31 @@ async function triggerNotification(task) {
 }
 
 async function startLockScreen(task) {
-  // 通知后端锁屏模式激活
+  // 通知后端锁屏模式激活（用于暂停计时）
   invoke('timer_set_lock_screen_active', { active: true }).catch(console.error);
 
-  // 使用任务级别的锁屏时长，如果没有则使用全局设置
   const lockDuration = task.lockDuration ?? settings.lockDuration;
   const lockMode = task.lockMode || 'normal';
 
-  lockScreenState = {
-    active: true,
-    remaining: lockDuration,
-    task: { ...task },
-    unlockProgress: 0,
-    unlockTimer: null,
-    waitingConfirm: false,
-  };
-
   try {
-    await invoke('show_main_window');
     await invoke('enter_lock_mode', {
       task: {
+        id: task.id,
         title: task.title,
         desc: task.desc,
         duration: lockDuration,
         icon: task.icon,
         lock_mode: lockMode,
+        require_confirm: !!settings.lockEndRequireConfirm,
       }
     });
   } catch (e) {
     console.error('Failed to enter lock mode', e);
+    // 兜底：进入锁屏失败时回退为普通弹窗提醒
+    invoke('timer_set_lock_screen_active', { active: false }).catch(() => {});
+    activePopup = { ...task };
+    renderFullUI();
   }
-
-  renderFullUI();
-
-  const lockInterval = setInterval(() => {
-    if (!lockScreenState.active) {
-      clearInterval(lockInterval);
-      return;
-    }
-
-    lockScreenState.remaining--;
-    updateLockScreenTimer();
-
-    if (lockScreenState.remaining <= 0) {
-      clearInterval(lockInterval);
-      if (settings.lockEndRequireConfirm) {
-        showLockConfirm();
-      } else {
-        endLockScreen().catch(console.error);
-      }
-    }
-  }, 1000);
 }
 
 function showLockConfirm() {
@@ -525,7 +495,7 @@ function updateLockScreenTimer() {
 }
 
 function getUnlockHoldSeconds() {
-  return lockScreenState.task?.lockMode === 'strict' ? 5 : 3;
+  return 3;
 }
 
 function startUnlockPress() {
@@ -547,7 +517,11 @@ function startUnlockPress() {
     
     if (lockScreenState.unlockProgress >= 100) {
       cancelUnlockPress();
-      endLockScreen();
+      if (runtimeMode === 'lock') {
+        finishLockSession().catch(console.error);
+      } else {
+        endLockScreen();
+      }
     }
   }, 100);
 }
@@ -585,7 +559,7 @@ function addTask() {
   settings.tasks.push({
     id: id, title: '新提醒', desc: '又是充满活力的一天，记得休息哦~',
     interval: 30, enabled: true, icon: 'bell',
-    lockDuration: 0, lockMode: 'off', leadSec: 0, delayOnceEnabled: false, delayOnceSec: 0,
+    lockDuration: 0, lockMode: 'gentle', leadSec: 0, delayOnceEnabled: false, delayOnceSec: 0,
     autoResetOnIdle: true
   });
   countdowns[id] = 30 * 60;
@@ -649,7 +623,7 @@ function applyOfficePreset() {
     Object.assign(water, {
       interval: 60,
       lockDuration: 0,
-      lockMode: 'off',
+      lockMode: 'gentle',
       leadSec: 0,
       delayOnceEnabled: false,
       delayOnceSec: 0,
@@ -781,12 +755,11 @@ function renderPrewarnUI(prewarn) {
     </div>
   `;
 
-  const currentWindow = WebviewWindow.getCurrent();
   let remaining = Math.max(0, Number(prewarn.remaining) || 0);
 
   const closeSelf = async () => {
     try {
-      await currentWindow.close();
+      await invoke('close_window');
     } catch (_) {
       // ignore
     }
@@ -827,6 +800,87 @@ function renderPrewarnUI(prewarn) {
       await closeSelf();
     }
   });
+}
+
+function renderLockOnlyUI({ allowUnlock }) {
+  const app = document.getElementById('app');
+
+  app.innerHTML = `
+    <div class="lock-screen show lock-only">
+      <div class="lock-screen-particles">
+        ${Array.from({length: 20}, (_, i) => `<div class="particle" style="left:${Math.random()*100}%; top:${Math.random()*100}%; animation-delay:${Math.random()*6}s;"></div>`).join('')}
+      </div>
+      <div class="lock-screen-content">
+        <div class="lock-timer-ring">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <defs>
+              <linearGradient id="lockGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#007aff"/>
+                <stop offset="100%" style="stop-color:#34c759"/>
+              </linearGradient>
+            </defs>
+            <circle class="bg" cx="100" cy="100" r="90" />
+            <circle class="progress" cx="100" cy="100" r="90" stroke-dasharray="565" stroke-dashoffset="0" />
+          </svg>
+          <div class="center-content">
+            <div class="lock-icon">${lockScreenState.task ? (ICONS[lockScreenState.task.icon] || ICONS.bell) : ICONS.eye}</div>
+            <div class="lock-seconds">${lockScreenState.waitingConfirm ? '?' : formatLockTime(lockScreenState.remaining).time}</div>
+            <div class="lock-unit">${lockScreenState.waitingConfirm ? '完成' : formatLockTime(lockScreenState.remaining).unit}</div>
+          </div>
+        </div>
+        <div class="lock-title">${lockScreenState.waitingConfirm ? '休息时间到！' : (lockScreenState.task?.title || '休息时间')}</div>
+        <div class="lock-message">${lockScreenState.waitingConfirm ? '您完成休息了吗？点击下方按钮确认~' : (lockScreenState.task?.desc || '让身体和眼睛休息一下吧~')}</div>
+        ${lockScreenState.waitingConfirm ? `
+        <button class="confirm-btn" id="confirmBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          已完成休息
+        </button>
+        ` : (allowUnlock ? `
+        <button class="unlock-btn" id="unlockBtn">
+          <div class="unlock-progress"></div>
+          <div class="unlock-text">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+            长按 ${getUnlockHoldSeconds()} 秒紧急退出
+          </div>
+        </button>
+         ` : `
+         <div class="lock-hint">${lockScreenState.task?.lockMode === 'strict'
+           ? '严格模式：请等待倒计时结束'
+           : (lockScreenState.remaining <= 0
+             ? (lockScreenState.requireConfirm ? '休息结束，请在主屏点击“已完成休息”' : '休息结束，即将返回…')
+             : '此屏为锁屏覆盖；紧急退出请在主屏操作')}</div>
+         `)}
+       </div>
+     </div>
+  `;
+}
+
+function bindLockEvents({ allowUnlock }) {
+  const unlockBtn = document.getElementById('unlockBtn');
+  if (unlockBtn && allowUnlock) {
+    unlockBtn.addEventListener('mousedown', startUnlockPress);
+    unlockBtn.addEventListener('mouseup', cancelUnlockPress);
+    unlockBtn.addEventListener('mouseleave', cancelUnlockPress);
+    unlockBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startUnlockPress();
+    });
+    unlockBtn.addEventListener('touchend', cancelUnlockPress);
+    unlockBtn.addEventListener('touchcancel', cancelUnlockPress);
+  }
+
+  const confirmBtn = document.getElementById('confirmBtn');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => finishLockSession().catch(console.error));
+  }
+}
+
+async function finishLockSession() {
+  lockScreenState.active = false;
+  lockScreenState.waitingConfirm = false;
+
+  await invoke('timer_set_lock_screen_active', { active: false }).catch(() => {});
+  await invoke('exit_lock_mode').catch(() => {});
 }
 
 function updateLiveValues() {
@@ -872,11 +926,19 @@ function updateLiveValues() {
   settings.tasks.forEach(task => {
     const card = document.querySelector(`.reminder-card[data-id="${task.id}"]`);
     if (card) {
+      const timeDisplay = card.querySelector('.time-remaining');
+      card.classList.toggle('disabled', !task.enabled);
+
+      if (!task.enabled) {
+        card.querySelector('.progress-mini .progress').style.strokeDashoffset = 126;
+        if (timeDisplay) timeDisplay.innerText = '(已关闭)';
+        return;
+      }
+
       const current = countdowns[task.id] || 0;
       const total = task.interval * 60;
       const offset = 126 * (1 - current / total);
       card.querySelector('.progress-mini .progress').style.strokeDashoffset = offset;
-      const timeDisplay = card.querySelector('.time-remaining');
       if (timeDisplay) timeDisplay.innerText = `(${formatTime(current)})`;
     }
   });
@@ -927,41 +989,54 @@ function renderFullUI() {
               ${!['sit', 'water', 'eye'].includes(task.id) ? `<div class="remove-btn" data-id="${task.id}">${ICONS.trash}</div>` : ''}
             </div>
           </div>
-          <div class="card-footer">
-            <label class="footer-option" title="用户无操作超过阈值时自动重置">
-              <input type="checkbox" class="idle-reset-input" data-id="${task.id}" ${task.autoResetOnIdle ? 'checked' : ''}>
-              <span class="checkbox-custom"></span>
-              <span>空闲重置</span>
-            </label>
-            <div class="footer-option">
-              <span>锁屏</span>
-              <select class="lock-mode-select" data-id="${task.id}" ${settings.lockScreenEnabled ? '' : 'disabled'}>
-                <option value="off" ${task.lockMode === 'off' ? 'selected' : ''}>关闭</option>
-                <option value="normal" ${task.lockMode === 'normal' ? 'selected' : ''}>普通</option>
-                <option value="strict" ${task.lockMode === 'strict' ? 'selected' : ''}>严格</option>
-              </select>
+          <details class="card-settings" data-task-id="${task.id}" ${uiState.taskSettingsOpen[task.id] ? 'open' : ''}>
+            <summary class="card-settings-summary" title="轻柔=只提醒；普通=锁屏覆盖+可紧急退出；严格=锁屏覆盖+不可提前退出">
+              <span>设置</span>
+              <span class="card-settings-meta">
+                锁屏：${task.lockMode === 'gentle' ? '轻柔' : (task.lockMode === 'strict' ? '严格' : '普通')}
+                ${(settings.lockScreenEnabled && (task.lockMode === 'normal' || task.lockMode === 'strict') && (task.lockDuration ?? settings.lockDuration) > 0) ? ' · ' + (task.lockDuration ?? settings.lockDuration) + 's' : ''}
+                ${(task.leadSec ?? 0) > 0 ? ' · 预告' + (task.leadSec ?? 0) + 's' : ''}
+              </span>
+            </summary>
+            <div class="card-footer">
+              <label class="footer-option" title="用户无操作超过阈值时自动重置">
+                <input type="checkbox" class="idle-reset-input" data-id="${task.id}" ${task.autoResetOnIdle ? 'checked' : ''}>
+                <span class="checkbox-custom"></span>
+                <span>空闲重置</span>
+              </label>
+              <div class="footer-option">
+                <span>锁屏</span>
+                <select class="lock-mode-select" data-id="${task.id}" ${settings.lockScreenEnabled ? '' : 'disabled'}>
+                  <option value="gentle" ${task.lockMode === 'gentle' ? 'selected' : ''}>轻柔</option>
+                  <option value="normal" ${task.lockMode === 'normal' ? 'selected' : ''}>普通</option>
+                  <option value="strict" ${task.lockMode === 'strict' ? 'selected' : ''}>严格</option>
+                </select>
+              </div>
+              <div class="footer-option">
+                <span>锁屏时长</span>
+                <input type="number" class="lock-input" value="${task.lockDuration ?? settings.lockDuration}" data-id="${task.id}" min="0" max="3600" ${(!settings.lockScreenEnabled || (task.lockMode !== 'normal' && task.lockMode !== 'strict')) ? 'disabled' : ''}>
+                <span>秒</span>
+              </div>
+              <div class="footer-option">
+                <span>预告</span>
+                <input type="number" class="lead-input" value="${task.leadSec ?? 0}" data-id="${task.id}" min="0" max="3600">
+                <span>秒</span>
+              </div>
+              <label class="footer-option" title="每轮仅允许一次">
+                <input type="checkbox" class="delay-once-input" data-id="${task.id}" ${task.delayOnceEnabled ? 'checked' : ''}>
+                <span class="checkbox-custom"></span>
+                <span>延迟一次</span>
+              </label>
+              <div class="footer-option">
+                <span>时长</span>
+                <input type="number" class="delay-input" value="${task.delayOnceSec ?? 0}" data-id="${task.id}" min="0" max="3600" ${task.delayOnceEnabled ? '' : 'disabled'}>
+                <span>秒</span>
+              </div>
+              <div class="footer-help">
+                模式说明：轻柔=只提醒；普通=锁屏覆盖+可紧急退出；严格=锁屏覆盖+不可提前退出
+              </div>
             </div>
-            <div class="footer-option">
-              <span>锁屏时长</span>
-              <input type="number" class="lock-input" value="${task.lockDuration ?? settings.lockDuration}" data-id="${task.id}" min="0" max="3600" ${(!settings.lockScreenEnabled || task.lockMode === 'off') ? 'disabled' : ''}>
-              <span>秒</span>
-            </div>
-            <div class="footer-option">
-              <span>预告</span>
-              <input type="number" class="lead-input" value="${task.leadSec ?? 0}" data-id="${task.id}" min="0" max="3600">
-              <span>秒</span>
-            </div>
-            <label class="footer-option" title="每轮仅允许一次">
-              <input type="checkbox" class="delay-once-input" data-id="${task.id}" ${task.delayOnceEnabled ? 'checked' : ''}>
-              <span class="checkbox-custom"></span>
-              <span>延迟一次</span>
-            </label>
-            <div class="footer-option">
-              <span>时长</span>
-              <input type="number" class="delay-input" value="${task.delayOnceSec ?? 0}" data-id="${task.id}" min="0" max="3600" ${task.delayOnceEnabled ? '' : 'disabled'}>
-              <span>秒</span>
-            </div>
-          </div>
+          </details>
         </div>
       `).join('')}
     </div>
@@ -974,56 +1049,7 @@ function renderFullUI() {
     </div>
 
     <div class="settings-section">
-      <h3>系统设置</h3>
-      <div class="setting-row">
-        <div class="setting-info">
-          <label>强制休息锁屏</label>
-          <span class="setting-desc">提醒时锁定屏幕，确保真正休息</span>
-        </div>
-        <div class="toggle ${settings.lockScreenEnabled ? 'active' : ''}" id="lockToggle"></div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info">
-          <label>锁屏结束手动确认</label>
-          <span class="setting-desc">开启后倒计时结束需点击确认；关闭则自动结束</span>
-        </div>
-        <div class="toggle ${settings.lockEndRequireConfirm ? 'active' : ''}" id="lockConfirmToggle"></div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info">
-          <label>联动模式（护眼×久坐）</label>
-          <span class="setting-desc">按整数倍对齐，减少重叠/接连提醒</span>
-        </div>
-        <div class="toggle ${settings.scheduleMode === 'synced' ? 'active' : ''}" id="syncedToggle"></div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info">
-          <label>冲突处理</label>
-          <span class="setting-desc">多个任务同一时刻到点时</span>
-        </div>
-        <select class="setting-select" id="conflictPolicySelect">
-          <option value="priority" ${settings.conflictPolicy === 'priority' ? 'selected' : ''}>仅触发优先级最高</option>
-          <option value="merge" ${settings.conflictPolicy === 'merge' ? 'selected' : ''}>合并提示</option>
-          <option value="defer" ${settings.conflictPolicy === 'defer' ? 'selected' : ''}>顺延补一次</option>
-        </select>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info">
-          <label>办公科学默认</label>
-          <span class="setting-desc">一键应用推荐参数</span>
-        </div>
-        <button class="preset-btn" id="officePresetBtn">应用</button>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info">
-          <label>空闲检测阈值</label>
-          <span class="setting-desc">超过此时间无操作视为空闲${isIdle ? ' (当前空闲中)' : ''}</span>
-        </div>
-        <div class="idle-threshold-input-group">
-          <input type="number" class="idle-threshold-input" id="idleThresholdInput" value="${Math.floor(settings.idleThreshold / 60)}" min="1" max="60">
-          <span class="input-unit">分钟</span>
-        </div>
-      </div>
+      <h3>基础设置</h3>
       <div class="setting-row">
         <label>提示音</label>
         <div style="display:flex; gap:12px; align-items:center;">
@@ -1044,6 +1070,67 @@ function renderFullUI() {
           ${isCheckingUpdate ? '<span class="spinner"></span> 检查中...' : (updateInfo ? '立即更新' : '检查更新')}
         </button>
       </div>
+
+      <details class="settings-advanced" id="advancedSettings" ${uiState.advancedSettingsOpen ? 'open' : ''}>
+        <summary>高级设置</summary>
+        <div class="settings-advanced-body">
+          <div class="setting-row">
+            <div class="setting-info">
+              <label>强制休息锁屏</label>
+              <span class="setting-desc">提醒时锁定屏幕，确保真正休息</span>
+            </div>
+            <div class="toggle ${settings.lockScreenEnabled ? 'active' : ''}" id="lockToggle"></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <label>锁屏结束手动确认</label>
+              <span class="setting-desc">开启后倒计时结束需点击确认；关闭则自动结束</span>
+            </div>
+            <div class="toggle ${settings.lockEndRequireConfirm ? 'active' : ''}" id="lockConfirmToggle"></div>
+          </div>
+          <div class="setting-row setting-note">
+            <div class="setting-info">
+              <label>锁屏模式说明</label>
+              <span class="setting-desc">轻柔=只提醒；普通=锁屏覆盖+可紧急退出；严格=锁屏覆盖+不可提前退出</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <label>联动模式（护眼×久坐）</label>
+              <span class="setting-desc">按整数倍对齐，减少重叠/接连提醒</span>
+            </div>
+            <div class="toggle ${settings.scheduleMode === 'synced' ? 'active' : ''}" id="syncedToggle"></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <label>冲突处理</label>
+              <span class="setting-desc">多个任务同一时刻到点时</span>
+            </div>
+            <select class="setting-select" id="conflictPolicySelect">
+              <option value="priority" ${settings.conflictPolicy === 'priority' ? 'selected' : ''}>仅触发优先级最高</option>
+              <option value="merge" ${settings.conflictPolicy === 'merge' ? 'selected' : ''}>合并提示</option>
+              <option value="defer" ${settings.conflictPolicy === 'defer' ? 'selected' : ''}>顺延补一次</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <label>办公科学默认</label>
+              <span class="setting-desc">一键应用推荐参数</span>
+            </div>
+            <button class="preset-btn" id="officePresetBtn">应用</button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <label>空闲检测阈值</label>
+              <span class="setting-desc">超过此时间无操作视为空闲${isIdle ? ' (当前空闲中)' : ''}</span>
+            </div>
+            <div class="idle-threshold-input-group">
+              <input type="number" class="idle-threshold-input" id="idleThresholdInput" value="${Math.floor(settings.idleThreshold / 60)}" min="1" max="60">
+              <span class="input-unit">分钟</span>
+            </div>
+          </div>
+        </div>
+      </details>
     </div>
 
     ${updateMessage ? `
@@ -1093,6 +1180,8 @@ function renderFullUI() {
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
           已完成休息
         </button>
+        ` : (lockScreenState.task?.lockMode === 'strict' ? `
+        <div class="lock-hint">严格模式：请等待倒计时结束</div>
         ` : `
         <button class="unlock-btn" id="unlockBtn">
           <div class="unlock-progress"></div>
@@ -1101,7 +1190,7 @@ function renderFullUI() {
             长按 ${getUnlockHoldSeconds()} 秒紧急解锁
           </div>
         </button>
-        `}
+        `)}
       </div>
     </div>
 
@@ -1186,7 +1275,7 @@ function bindEvents() {
     });
   });
 
-  document.querySelectorAll('.preset-btn:not(#testSoundBtn)').forEach(el => {
+  document.querySelectorAll('.preset-btn[data-val][data-id]').forEach(el => {
     el.addEventListener('click', () => {
       const val = parseInt(el.dataset.val);
       updateTask(el.dataset.id, { interval: val });
@@ -1348,6 +1437,21 @@ function bindEvents() {
         saveSettings();
         await invoke('set_idle_threshold', { seconds: settings.idleThreshold }).catch(console.error);
       }
+    });
+  }
+
+  document.querySelectorAll('.card-settings').forEach((el) => {
+    el.addEventListener('toggle', () => {
+      const id = el.dataset.taskId;
+      if (!id) return;
+      uiState.taskSettingsOpen[id] = el.open;
+    });
+  });
+
+  const advancedSettings = document.getElementById('advancedSettings');
+  if (advancedSettings) {
+    advancedSettings.addEventListener('toggle', () => {
+      uiState.advancedSettingsOpen = advancedSettings.open;
     });
   }
 }

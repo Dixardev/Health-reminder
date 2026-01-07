@@ -295,12 +295,16 @@ unsafe extern "system" fn session_wnd_proc(
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct LockTaskArgs {
+    #[serde(default)]
+    id: Option<String>,
     title: String,
     desc: String,
     duration: i32,
     icon: String,
     #[serde(default)]
     lock_mode: Option<String>, // normal | strict
+    #[serde(default)]
+    require_confirm: bool,
 }
 
 static LOCK_WATCHDOG_SEQ: AtomicU64 = AtomicU64::new(0);
@@ -325,10 +329,6 @@ fn start_lock_watchdog(app: AppHandle, strict: bool) {
             thread::sleep(tick);
 
             let mut windows: Vec<tauri::WebviewWindow> = Vec::new();
-
-            if let Some(w) = app.get_webview_window("main") {
-                windows.push(w);
-            }
 
             let lock_labels = {
                 let lock_state = app.state::<LockState>();
@@ -383,7 +383,7 @@ struct TaskTriggeredPayload {
     icon: String,
 }
 
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct TaskLeadPayload {
     id: String,
     title: String,
@@ -836,7 +836,8 @@ fn start_timer_thread(app_handle: AppHandle) {
                         let remaining = if elapsed >= total_secs { 0 } else { total_secs - elapsed };
 
                         if timer.config.lead_sec > 0
-                            && remaining == timer.config.lead_sec
+                            && remaining > 0
+                            && remaining <= timer.config.lead_sec
                             && !timer.lead_shown
                         {
                             let can_delay = timer.config.delay_once_enabled
@@ -1035,6 +1036,56 @@ fn hide_main_window(window: tauri::Window) {
 }
 
 #[tauri::command]
+fn close_window(window: tauri::Window) {
+    let _ = window.close();
+}
+
+#[tauri::command]
+fn open_prewarn_window(app: tauri::AppHandle, lead: TaskLeadPayload) -> Result<(), String> {
+    let label = format!("prewarn-{}", lead.id);
+
+    if let Some(existing) = app.get_webview_window(&label) {
+        let _ = existing.show();
+        let _ = existing.set_focus();
+        return Ok(());
+    }
+
+    let encoded: String = form_urlencoded::Serializer::new(String::new())
+        .append_pair("mode", "prewarn")
+        .append_pair("id", &lead.id)
+        .append_pair("title", &lead.title)
+        .append_pair("desc", &lead.desc)
+        .append_pair("icon", &lead.icon)
+        .append_pair("remaining", &lead.remaining.to_string())
+        .append_pair("lead_sec", &lead.lead_sec.to_string())
+        .append_pair("can_delay", if lead.can_delay { "1" } else { "0" })
+        .append_pair("delay_sec", &lead.delay_sec.to_string())
+        .finish();
+
+    let url_str = format!("index.html?{}", encoded);
+
+    let win = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(PathBuf::from(url_str)))
+        .title("即将开始")
+        .always_on_top(true)
+        .decorations(false)
+        .resizable(false)
+        .skip_taskbar(true)
+        .visible(false)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let _ = win.set_size(tauri::Size::Logical(tauri::LogicalSize {
+        width: 360.0,
+        height: 200.0,
+    }));
+    let _ = win.center();
+    let _ = win.show();
+    let _ = win.set_focus();
+
+    Ok(())
+}
+
+#[tauri::command]
 fn update_tray_tooltip(state: State<TrayState>, tooltip: String) {
     if let Some(tray) = state.0.lock().unwrap().as_ref() {
         let _ = tray.set_tooltip(Some(&tooltip));
@@ -1059,46 +1110,60 @@ async fn enter_lock_mode(app: tauri::AppHandle, window: tauri::Window, state: St
         .unwrap_or("normal");
     let strict = lock_mode == "strict";
 
-    let _ = window.show();
-    let _ = window.set_focus();
-    let _ = window.set_fullscreen(true);
-    let _ = window.set_always_on_top(true);
-    let _ = window.set_closable(false);
-    let _ = window.set_minimizable(false);
-
-    if strict {
-        let _ = window.set_decorations(false);
-        let _ = window.set_resizable(false);
-        let _ = window.set_maximizable(false);
-    }
-
     let monitors = window.available_monitors().unwrap_or_default();
     let current_monitor = window.current_monitor().unwrap_or(None);
-    
-    let mut created_windows = Vec::new();
-    
+    let primary_monitor = window.primary_monitor().ok().flatten();
+    let master_monitor = current_monitor.as_ref().or(primary_monitor.as_ref());
+
+    // Best-effort close any previously tracked lock windows before creating new ones.
+    {
+        let mut state_guard = state.0.lock().unwrap();
+        for label in state_guard.iter() {
+            if let Some(w) = app.get_webview_window(label) {
+                let _ = w.close();
+            }
+        }
+        state_guard.clear();
+    }
+
+    let mut created_labels: Vec<String> = Vec::new();
+
     for (i, m) in monitors.iter().enumerate() {
-        if let Some(ref cm) = current_monitor {
-             // Basic position check to assume it's the same monitor
-             if m.position().x == cm.position().x && m.position().y == cm.position().y {
-                 continue;
-             }
+        let is_master = master_monitor
+            .map(|mm| m.position().x == mm.position().x && m.position().y == mm.position().y)
+            .unwrap_or(i == 0);
+
+        let label = if is_master {
+            "lock-master".to_string()
+        } else {
+            format!("lock-slave-{}", i)
+        };
+
+        if let Some(existing) = app.get_webview_window(&label) {
+            let _ = existing.close();
         }
 
-        let label = format!("lock-slave-{}", i);
-        
-        let mut url_str = String::from("index.html?mode=lock_slave");
+        let mut params = form_urlencoded::Serializer::new(String::new());
+        params.append_pair("mode", "lock");
+        params.append_pair("role", if is_master { "master" } else { "slave" });
+
         if let Some(ref t) = task {
-             let encoded: String = form_urlencoded::Serializer::new(String::new())
+            let id = t.id.as_deref().unwrap_or("lock_task");
+            params
+                .append_pair("id", id)
                 .append_pair("title", &t.title)
                 .append_pair("desc", &t.desc)
                 .append_pair("duration", &t.duration.to_string())
                 .append_pair("icon", &t.icon)
-                .finish();
-             url_str = format!("index.html?mode=lock_slave&{}", encoded);
+                .append_pair("lock_mode", lock_mode)
+                .append_pair("require_confirm", if t.require_confirm { "1" } else { "0" });
+        } else {
+            params.append_pair("lock_mode", lock_mode);
         }
 
-        if let Ok(slave) = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(PathBuf::from(url_str)))
+        let url_str = format!("index.html?{}", params.finish());
+
+        if let Ok(w) = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(PathBuf::from(url_str)))
             .title("Lock Screen")
             .always_on_top(true)
             .closable(false)
@@ -1107,23 +1172,72 @@ async fn enter_lock_mode(app: tauri::AppHandle, window: tauri::Window, state: St
             .resizable(false)
             .skip_taskbar(true)
             .visible(false)
-            .build() {
-                
-            let _ = slave.set_position(m.position().clone());
-            let _ = slave.set_size(tauri::Size::Physical(m.size().clone()));
-            let _ = slave.show();
-            let _ = slave.set_focus();
-            let _ = slave.set_fullscreen(true);
-            created_windows.push(label);
+            .build()
+        {
+            let _ = w.set_position(m.position().clone());
+            let _ = w.set_size(tauri::Size::Physical(m.size().clone()));
+            let _ = w.show();
+            let _ = w.set_focus();
+            let _ = w.set_fullscreen(true);
+            let _ = w.set_always_on_top(true);
+            let _ = w.set_closable(false);
+            let _ = w.set_minimizable(false);
+
+            if strict {
+                let _ = w.set_decorations(false);
+                let _ = w.set_resizable(false);
+                let _ = w.set_maximizable(false);
+            }
+
+            created_labels.push(label);
         }
     }
-    
-    let mut state_guard = state.0.lock().unwrap();
-    state_guard.extend(created_windows);
 
-    if strict {
-        start_lock_watchdog(app.clone(), true);
+    // Fallback: if monitor enumeration failed, try to create a single lock window.
+    if created_labels.is_empty() {
+        let label = "lock-master".to_string();
+        if let Some(existing) = app.get_webview_window(&label) {
+            let _ = existing.close();
+        }
+
+        let mut params = form_urlencoded::Serializer::new(String::new());
+        params.append_pair("mode", "lock");
+        params.append_pair("role", "master");
+        params.append_pair("lock_mode", lock_mode);
+
+        if let Some(ref t) = task {
+            let id = t.id.as_deref().unwrap_or("lock_task");
+            params
+                .append_pair("id", id)
+                .append_pair("title", &t.title)
+                .append_pair("desc", &t.desc)
+                .append_pair("duration", &t.duration.to_string())
+                .append_pair("icon", &t.icon)
+                .append_pair("require_confirm", if t.require_confirm { "1" } else { "0" });
+        }
+
+        let url_str = format!("index.html?{}", params.finish());
+
+        if let Ok(w) = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(PathBuf::from(url_str)))
+            .title("Lock Screen")
+            .always_on_top(true)
+            .closable(false)
+            .minimizable(false)
+            .decorations(false)
+            .resizable(false)
+            .skip_taskbar(true)
+            .visible(false)
+            .build()
+        {
+            let _ = w.show();
+            let _ = w.set_focus();
+            let _ = w.set_fullscreen(true);
+            created_labels.push(label);
+        }
     }
+
+    state.0.lock().unwrap().extend(created_labels);
+    start_lock_watchdog(app.clone(), strict);
 
     Ok(())
 }
@@ -1132,13 +1246,9 @@ async fn enter_lock_mode(app: tauri::AppHandle, window: tauri::Window, state: St
 fn exit_lock_mode(app: tauri::AppHandle, window: tauri::Window, state: State<LockState>) {
     stop_lock_watchdog();
 
-    let _ = window.set_fullscreen(false);
-    let _ = window.set_always_on_top(false);
-    let _ = window.set_decorations(true);
-    let _ = window.set_resizable(false);
-    let _ = window.set_maximizable(false);
-    let _ = window.set_closable(true);
-    let _ = window.set_minimizable(true);
+    if window.label() == "lock-master" || window.label().starts_with("lock-slave-") {
+        let _ = window.close();
+    }
 
     let mut state_guard = state.0.lock().unwrap();
     for label in state_guard.iter() {
@@ -1166,6 +1276,8 @@ pub fn run() {
             show_notification,
             show_main_window,
             hide_main_window,
+            close_window,
+            open_prewarn_window,
             update_tray_tooltip,
             update_pause_menu,
             enter_lock_mode,
@@ -1258,7 +1370,10 @@ pub fn run() {
                 }
 
                 // 锁屏从属窗口：锁屏期间禁止被关闭（Alt+F4 等）
-                if lock_active && window.label().starts_with("lock-slave-") {
+                if lock_active
+                    && (window.label() == "lock-master"
+                        || window.label().starts_with("lock-slave-"))
+                {
                     api.prevent_close();
                 }
             }
