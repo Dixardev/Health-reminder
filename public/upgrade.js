@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         }
     } catch (error) {
-        alert("Failed to fetch user data");
+        showCustomAlert("Failed to fetch user data");
     }
 
     async function upgradeLevel(level) {
@@ -37,15 +37,35 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
             const data = await response.json();
             if (data.success) {
-                alert(`Successfully upgraded to level ${level}`);
-                window.location.href = '/';
+                showCustomAlert(`Successfully upgraded to level ${level}`, () => {
+                    window.location.href = '/';
+                });
             } else {
-                alert(data.message);
+                showCustomAlert(data.message);
             }
         } catch (error) {
-            alert("Failed to upgrade level");
+            showCustomAlert("Failed to upgrade level");
         }
     }
 
     window.upgradeLevel = upgradeLevel;
+
+    function showCustomAlert(message, callback) {
+        document.getElementById('custom-alert-message').innerText = message;
+        const alertElement = document.getElementById('custom-alert');
+        alertElement.style.display = 'flex';
+        
+        const button = alertElement.querySelector('button');
+        button.onclick = () => {
+            alertElement.style.display = 'none';
+            if (callback) callback();
+        };
+    }
+
+    function closeCustomAlert() {
+        document.getElementById('custom-alert').style.display = 'none';
+    }
+
+    window.showCustomAlert = showCustomAlert;
+    window.closeCustomAlert = closeCustomAlert;
 });

@@ -138,7 +138,7 @@ body.dark-mode #coin-balance {
     width: 40%;
     padding: 3.3em;
     padding-top: 5em;
-    padding-bottom: 1em;
+    padding-bottom: 0;
 }
 
 .bar {
@@ -187,9 +187,7 @@ body.dark-mode #coin-balance {
   justify-content: space-between;
   align-items: center;
 }
-#buzz {
-  height: 18px;
-}
+
 #mine-btn:disabled {
     background-color: #ccc;
     cursor: not-allowed;
@@ -242,6 +240,10 @@ body.dark-mode .bar:nth-child(1) { background-color: #e74c3c; animation-delay: 0
 }
 #timer-text {
   font-size: 12px;
+}
+
+#mining-session-count {
+  margin-top: 0;
 }
 p {
   font-size: 15px;
@@ -435,6 +437,10 @@ body.dark-mode #bottom-nav .nav-item.active span {
     
     
 }
+body.dark-mode .cherry-modal-content {
+    background-color: #0b0e14;
+    color: #fff;
+}
 
 .cherry-modal {
     color: #2C3A4D;
@@ -442,14 +448,13 @@ body.dark-mode #bottom-nav .nav-item.active span {
 }
 
 .cherry-modal-content {
-    background-color: #fefefe;
+    background-color: #fff;
     margin: 15% auto; 
     padding: 20px;
-    border: 1px solid #888;
+    border: 1px solid #0b0e14;
     width: 70%; 
     height: auto;
     border-radius: 30px;
-    border-top-left-radius: 0;
     text-align: left;
     transform: scale(0);
     animation: spreadOut 0.8s forwards; /* Add animation */
@@ -462,8 +467,13 @@ body.dark-mode #bottom-nav .nav-item.active span {
     font-size: 12px;
 }
 #cherry-message button {
-    margin-top: 30px;
+    
     margin-bottom: 0;
+}
+#cherry-message #report-issue,
+#whats-new,
+#community {
+   margin-top: 0px;
 }
 @keyframes spreadOut {
     0% {

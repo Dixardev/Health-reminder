@@ -23,6 +23,10 @@ h1 {
     font-weight: bold;
     color: #016b02;
 }
+body.dark-mode .level-option {
+   background-color: #2f0341;
+   color: white;
+}
 
 #upgrade-options {
     display: flex;
@@ -37,7 +41,7 @@ h1 {
     border: 1px solid #ccc;
     border-radius: 10px;
     padding: 20px;
-    width: 80%;
+    width: 100%;
     text-align: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -47,8 +51,8 @@ h1 {
 }
 
 .level-option img {
-    width: 100px;
-    height: 100px;
+    width: 200px;
+    height: auto;
     margin-bottom: 10px;
 }
 
@@ -66,7 +70,7 @@ h1 {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    background-color: #007bff;
+    background-color: #1cac13;
     color: #fff;
 }
 
@@ -74,45 +78,102 @@ h1 {
     background-color: #ccc;
     cursor: not-allowed;
 }
+#hour {
+    background: #998702;
+    color: #fff;
+    padding: 3px;
+}
+body.dark-mode #reward {
+    color: rgba(0, 255, 0, 1);
+}
+#reward {
+    color: #1cac13;
+}
+/* Custom Alert Styles */
+      #custom-alert {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
 
+      #custom-alert-content {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        max-width: 80%;
+      }
+      #custom-alert-content button {
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        background-color: #1cac13;
+        color: #fff;
+      }
+
+      #custom-alert-content button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
     </style>
 </head>
 <body>
+  <!-- Custom Alert HTML -->
+    <div id="custom-alert">
+      <div id="custom-alert-content">
+        <p id="custom-alert-message"></p>
+        <button onclick="closeCustomAlert()">OK</button>
+      </div>
+    </div>
     <h1>Upgrade Your Mining Level</h1>
     <p id="current-level">Current Level: 1</p>
     <div id="upgrade-options">
         <div class="level-option" data-level="1">
             <h2>Level 1</h2>
-            <img src="iconns/slide2.png" alt="Level 1">
-            <p>Reward: 15,000 SFT in 2 hours</p>
+            <img src="iconns/level1.png" alt="Level 1">
+            <p><span id="reward"><b>7,500</b></span> SFT / Hour</p>
+            <p>Session: <span id="hour">2 Hours</span></p>
             <p>Default Level</p>
             <button disabled>Default Level</button>
         </div>
         <div class="level-option" data-level="2">
             <h2>Level 2</h2>
-            <img src="iconns/slide2.png" alt="Level 2">
-            <p>Reward: 30,000 SFT in 3 hours</p>
+            <img src="iconns/level2.png" alt="Level 2">
+            <p><span id="reward"><b>10,000</b></span> SFT / Hour</p>
+            <p>Session: <span id="hour">3 Hours</span></p>
             <p>Cost: 100,000 SFT</p>
             <button onclick="upgradeLevel(2)">Upgrade to Level 2</button>
         </div>
         <div class="level-option" data-level="3">
             <h2>Level 3</h2>
-            <img src="iconns/slide2.png" alt="Level 3">
-            <p>Reward: 60,000 SFT in 4 hours</p>
+            <img src="iconns/level3.png" alt="Level 3">
+            <p><span id="reward"><b>15,000</b></span> SFT / Hour</p>
+            <p>Session: <span id="hour">4 Hours</span></p>
             <p>Cost: 500,000 SFT</p>
             <button onclick="upgradeLevel(3)">Upgrade to Level 3</button>
         </div>
         <div class="level-option" data-level="4">
             <h2>Level 4</h2>
-            <img src="iconns/slide2.png" alt="Level 4">
-            <p>Reward: 120,000 SFT in 5 hours</p>
+            <img src="iconns/level4.png" alt="Level 4">
+            <p><span id="reward"><b>24,000</b></span> SFT / Hour</p>
+            <p>Session: <span id="hour">5 Hours</span></p>
             <p>Cost: 2,000,000 SFT</p>
             <button onclick="upgradeLevel(4)">Upgrade to Level 4</button>
         </div>
         <div class="level-option" data-level="5">
             <h2>Level 5</h2>
-            <img src="iconns/slide2.png" alt="Level 5">
-            <p>Reward: 240,000 SFT in 6 hours</p>
+            <img src="iconns/level5.png" alt="Level 5">
+            <p><span id="reward"><b>40,000</b></span> SFT / Hour</p>
+            <p>Session: <span id="hour">6 Hours</span></p>
             <p>Cost: 10,000,000 SFT</p>
             <button onclick="upgradeLevel(5)">Upgrade to Level 5</button>
         </div>

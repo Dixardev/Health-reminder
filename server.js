@@ -4,8 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const connectToDatabase = require('./utils/db');
 const User = require('./models/User');
-const redisClient = require('./cache'); // Import Redis client
-const authRoutes = require('./routes/auth'); // Import authentication routes
+const redisClient = require('./cache');
 
 dotenv.config();
 
@@ -18,28 +17,19 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Use authentication routes
+const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
-// Cache middleware
 const cache = async (req, res, next) => {
-    const { username } = req.body || req.params; // Use req.params for GET requests
+    const { username } = req.body || req.params;
 
-    if (!username) {
-        // If username is not defined, skip caching
-        return next();
-    }
+    if (!username) return next();
 
     try {
-        console.log('Checking cache for:', username); // Debugging
         const cachedData = await redisClient.get(username);
-
         if (cachedData) {
-            console.log('Cache hit:', username); // Debugging
             return res.status(200).json(JSON.parse(cachedData));
         }
-
-        console.log('Cache miss:', username); // Debugging
         next();
     } catch (error) {
         console.error('Redis error:', error);
@@ -47,12 +37,9 @@ const cache = async (req, res, next) => {
     }
 };
 
-// Apply cache middleware to referral endpoint
 app.get('/api/referrals/:username', cache, async (req, res) => {
     const { username } = req.params;
-
     try {
-        console.log('Fetching referrals for:', username); // Debugging
         const user = await User.findOne({ username }).populate('referrals');
         if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -61,12 +48,12 @@ app.get('/api/referrals/:username', cache, async (req, res) => {
             coinBalance: ref.coinBalance
         }));
 
-        const referralBonus = user.referrals.length * 50000; // 50,000 SFT for each referred friend
-        const miningRewards = referrals.reduce((acc, ref) => acc + ref.coinBalance * 0.2, 0); // 20% mining rewards
+        const referralBonus = user.referrals.length * 50000;
+        const miningRewards = referrals.reduce((acc, ref) => acc + ref.coinBalance * 0.2, 0);
         const totalEarnings = referralBonus + miningRewards;
 
         const response = { referrals, totalEarnings };
-        await redisClient.set(username, JSON.stringify(response), 'EX', 60 * 60); // Cache for 1 hour
+        await redisClient.set(username, JSON.stringify(response), 'EX', 3600);
 
         res.status(200).json(response);
     } catch (error) {
@@ -86,7 +73,12 @@ app.post('/api/startMining', async (req, res) => {
         user.miningStartTime = new Date();
         await user.save();
 
-        res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance, level: user.level });
+        res.status(200).json({
+            miningStartTime: user.miningStartTime,
+            coinBalance: user.coinBalance,
+            level: user.level,
+            miningSessionCount: user.miningSessionCount || 0
+        });
     } catch (error) {
         res.status(500).json({ message: 'Error starting mining' });
     }
@@ -99,7 +91,7 @@ app.post('/api/miningStatus', async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const currentTime = Date.now();
-        const rewardIntervals = [2 * 60 * 60 * 1000, 3 * 60 * 60 * 1000, 4 * 60 * 60 * 1000, 5 * 60 * 60 * 1000, 6 * 60 * 60 * 1000];
+        const rewardIntervals = [2, 3, 4, 5, 6].map(h => h * 60 * 60 * 1000);
         const rewards = [15000, 30000, 60000, 120000, 240000];
         const miningEndTime = new Date(user.miningStartTime).getTime() + rewardIntervals[user.level - 1];
 
@@ -107,12 +99,23 @@ app.post('/api/miningStatus', async (req, res) => {
             user.coinBalance += rewards[user.level - 1];
             user.isMining = false;
             user.miningStartTime = null;
-            user.miningSessionCount += 1;
+            user.miningSessionCount = (user.miningSessionCount || 0) + 1;
             await user.save();
-            return res.status(200).json({ miningComplete: true, coinBalance: user.coinBalance, miningSessionCount: user.miningSessionCount, level: user.level });
+
+            return res.status(200).json({
+                miningComplete: true,
+                coinBalance: user.coinBalance,
+                miningSessionCount: user.miningSessionCount,
+                level: user.level
+            });
         }
 
-        res.status(200).json({ miningStartTime: user.miningStartTime, coinBalance: user.coinBalance, miningSessionCount: user.miningSessionCount, level: user.level });
+        res.status(200).json({
+            miningStartTime: user.miningStartTime,
+            coinBalance: user.coinBalance,
+            level: user.level,
+            miningSessionCount: user.miningSessionCount || 0
+        });
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving mining status' });
     }
@@ -138,6 +141,31 @@ app.post('/api/upgradeLevel', async (req, res) => {
     }
 });
 
+app.post('/api/updateBalance', async (req, res) => {
+    const { username, reward } = req.body;
+
+    // Log the request payload
+    console.log(`Update Balance Request: username=${username}, reward=${reward}`);
+
+    try {
+        const user = await User.findOne({ username });
+        if (!user) {
+            console.log('User not found');
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.coinBalance += reward;
+        await user.save();
+
+        console.log('Balance updated successfully');
+        res.status(200).json({ message: 'Balance updated' });
+    } catch (error) {
+        // Log the error details
+        console.error('Error updating balance:', error);
+        res.status(500).json({ message: 'Error updating balance' });
+    }
+});
+
 app.get('/api/miningSessionCount/:username', async (req, res) => {
     const { username } = req.params;
     try {
@@ -146,48 +174,58 @@ app.get('/api/miningSessionCount/:username', async (req, res) => {
 
         res.status(200).json({ miningSessionCount: user.miningSessionCount });
     } catch (error) {
-        res.status(500).json({ message: 'Error retrieving mining session count' });
+        res.status(500).json({ message: 'Error fetching mining session count' });
     }
 });
 
-// Endpoint to claim task reward
-app.post('/api/claimTaskReward', async (req, res) => {
+app.get('/api/referralCount/:username', async (req, res) => {
+    const { username } = req.params;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        res.status(200).json({ referralCount: user.referralCount });
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching referral count' });
+    }
+});
+
+// Add API endpoint to check task status
+app.get('/api/taskStatus/:username/:taskId', async (req, res) => {
+    const { username, taskId } = req.params;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const claimedTasks = user.claimedTasks || [];
+        const claimed = claimedTasks.includes(taskId);
+
+        res.status(200).json({ claimed });
+    } catch (error) {
+        res.status(500).json({ message: 'Error checking task status' });
+    }
+});
+
+// Add API endpoint to claim a task
+app.post('/api/claimTask', async (req, res) => {
     const { username, taskId, reward } = req.body;
     try {
         const user = await User.findOne({ username });
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // Check if the task is already completed
-        if (user.completedTasks && user.completedTasks.includes(taskId)) {
-            return res.status(400).json({ message: 'Task already completed' });
+        const claimedTasks = user.claimedTasks || [];
+        if (claimedTasks.includes(taskId)) {
+            return res.status(400).json({ message: 'Task already claimed' });
         }
 
-        // Add the reward to the user's balance
         user.coinBalance += reward;
-        user.completedTasks = user.completedTasks || [];
-        user.completedTasks.push(taskId);
+        claimedTasks.push(taskId);
+        user.claimedTasks = claimedTasks;
         await user.save();
 
-        res.status(200).json({ success: true, newBalance: user.coinBalance });
+        res.status(200).json({ message: 'Task claimed successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Error claiming task reward' });
-    }
-});
-
-// Endpoint to claim daily check-in bonus
-app.post('/api/claimCheckInBonus', async (req, res) => {
-    const { username, reward } = req.body;
-    try {
-        const user = await User.findOne({ username });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
-        // Add the reward to the user's balance
-        user.coinBalance += reward;
-        await user.save();
-
-        res.status(200).json({ success: true, newBalance: user.coinBalance });
-    } catch (error) {
-        res.status(500).json({ message: 'Error claiming daily check-in bonus' });
+        res.status(500).json({ message: 'Error claiming task' });
     }
 });
 
@@ -196,9 +234,10 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Internal server error.' });
 });
 
-['friends', 'tasks', 'market', 'softie', 'more', 'upgrades', 'login', 'register', 'join-softcoin'].forEach(file => {
-    app.get(`/${file}`, (req, res) => {
-        res.sendFile(path.join(__dirname, 'public', `${file}.html`));
+const routes = ['friends', 'tasks', 'market', 'softie', 'more', 'upgrades', 'login', 'register', 'join-softcoin', 'goals'];
+routes.forEach(route => {
+    app.get(`/${route}`, (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', `${route}.html`));
     });
 });
 

@@ -1,115 +1,160 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const tasks = [
-        { id: "follow-btn", text: "Follow Softcoin on X", reward: 30000, url: "https://twitter.com/softcoin__" },
-        { id: "join-btn", text: "Join Telegram Channel", reward: 30000, url: "https://t.me/softcoinupdates" },
-        { id: "refer2-btn", text: "Refer 2 friends", reward: 30000, type: "count", count: 2 },
-        { id: "refer5-btn", text: "Refer 5 friends", reward: 50000, type: "count", count: 5 },
-        { id: "refer10-btn", text: "Refer 10 friends", reward: 100000, type: "count", count: 10 },
-        { id: "mine2-btn", text: "Complete 2 mining sessions", reward: 10000, type: "count", count: 2 },
-        { id: "mine20-btn", text: "Complete 20 mining sessions", reward: 100000, type: "count", count: 20 },
-        { id: "mine100-btn", text: "Complete 100 mining sessions", reward: 1000000, type: "count", count: 100 }
-    ];
+document.addEventListener("DOMContentLoaded", async () => {
+    const username = localStorage.getItem('username');
+    if (!username) return window.location.href = '/register';
 
-    const checkinRewards = [5000, 7000, 10000, 12000, 15000, 17000, 25000];
-    const checkinButton = document.getElementById("daily-check-in-btn");
+    const taskButtons = {
+        "mine2-btn": { target: 2, reward: 10000 },
+        "mine20-btn": { target: 20, reward: 100000 },
+        "mine100-btn": { target: 100, reward: 1000000 },
+        "refer2-btn": { target: 2, reward: 30000 },
+        "refer5-btn": { target: 5, reward: 50000 },
+        "refer10-btn": { target: 10, reward: 100000 },
+        "follow-btn": { target: 1, reward: 30000 },
+        "join-btn": { target: 1, reward: 30000 }
+    };
 
-    let checkinDay = localStorage.getItem("checkinDay") || 0;
-    let lastCheckin = localStorage.getItem("lastCheckin");
-
-    const currentDate = new Date().toDateString();
-    if (lastCheckin !== currentDate) {
-        checkinButton.disabled = false;
-        checkinButton.textContent = "Claim";
-    } else {
-        checkinButton.disabled = true;
-        checkinButton.textContent = "✓";
+    // Function to fetch user referral count
+    async function fetchReferralCount() {
+        try {
+            const response = await fetch(`/api/referrals/${username}`);
+            const data = await response.json();
+            return data.referrals.length || 0;
+        } catch (error) {
+            console.error('Error fetching referral count:', error);
+            return 0;
+        }
     }
 
-    checkinButton.addEventListener("click", () => {
-        if (lastCheckin !== currentDate) {
-            addToBalance(checkinRewards[checkinDay]);
-            checkinDay = (checkinDay + 1) % checkinRewards.length;
-            localStorage.setItem("checkinDay", checkinDay);
-            localStorage.setItem("lastCheckin", currentDate);
-            checkinButton.disabled = true;
-            checkinButton.textContent = "✓";
-        }
-    });
-
-    tasks.forEach(task => {
-        const button = document.getElementById(task.id);
-
-        if (task.type === "count") {
-            let progress = localStorage.getItem(task.id) || 0;
-            button.textContent = `${progress}/${task.count}`;
-            if (progress >= task.count) {
-                button.disabled = false;
-                button.textContent = "Claim";
-            }
-        } else {
-            if (localStorage.getItem(task.id) === "completed") {
-                button.textContent = "✓";
-                button.disabled = true;
-            } else if (localStorage.getItem(task.id) === "visited") {
-                button.textContent = "Claim";
-                button.addEventListener("click", () => {
-                    addToBalance(task.reward);
-                    button.textContent = "✓";
-                    button.disabled = true;
-                    localStorage.setItem(task.id, "completed");
-                });
-            } else {
-                button.addEventListener("click", () => {
-                    window.open(task.url, "_blank");
-                    localStorage.setItem(task.id, "visited");
-                    button.textContent = "Claim";
-                    button.addEventListener("click", () => {
-                        addToBalance(task.reward);
-                        button.textContent = "✓";
-                        button.disabled = true;
-                        localStorage.setItem(task.id, "completed");
-                    });
-                });
-            }
-        }
-
-        if (task.type === "count") {
-            const checkProgress = () => {
-                let progress = parseInt(localStorage.getItem(task.id) || 0);
-                button.textContent = `${progress}/${task.count}`;
-                if (progress >= task.count) {
-                    button.disabled = false;
-                    button.textContent = "Claim";
-                    button.addEventListener("click", () => {
-                        addToBalance(task.reward);
-                        button.textContent = "✓";
-                        button.disabled = true;
-                        localStorage.setItem(task.id, "completed");
-                    });
-                }
-            };
-            checkProgress();
-        }
-    });
-
-    function addToBalance(amount) {
-        let balance = parseInt(localStorage.getItem("balance") || 0);
-        balance += amount;
-        localStorage.setItem("balance", balance);
-        alert(`Added ${amount} SFT to your balance!`);
-    }
-    async function updateMiningSessionCount() {
+    // Function to fetch user mining session count
+    async function fetchMiningSessionCount() {
         try {
             const response = await fetch(`/api/miningSessionCount/${username}`);
             const data = await response.json();
-            // Update the UI with the mining session count
-            document.getElementById('mining-session-count').textContent = `Mining Sessions: ${data.miningSessionCount}`;
+            return data.miningSessionCount || 0;
         } catch (error) {
-            console.error('Failed to update mining session count', error);
+            console.error('Error fetching mining session count:', error);
+            return 0;
         }
     }
 
-    // Call this function in your initial setup
-    updateMiningSessionCount();
+    // Function to update the user's SFT balance and mark task as claimed
+    async function claimTask(taskId, reward) {
+        try {
+            const response = await fetch(`/api/claimTask`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, taskId, reward })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Failed to claim reward');
+            return true;
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
+    }
+
+    // Function to fetch the task status to check if it has been claimed
+    async function fetchTaskStatus(taskId) {
+        try {
+            const response = await fetch(`/api/taskStatus/${username}/${taskId}`);
+            const data = await response.json();
+            return data.claimed;
+        } catch (error) {
+            console.error('Error fetching task status:', error);
+            return false;
+        }
+    }
+
+    // Function to update the task button based on the user's progress
+    async function updateTaskButton(taskId, target, reward, fetchProgress) {
+        const button = document.getElementById(taskId);
+        const progressCount = await fetchProgress();
+        button.textContent = `${progressCount}/${target}`;
+
+        if (await fetchTaskStatus(taskId)) {
+            button.disabled = true;
+            button.innerHTML = "&#10003;"; // Checked sign
+        } else if (progressCount >= target) {
+            button.disabled = false;
+            button.textContent = "Claim";
+            button.addEventListener('click', async () => {
+                const success = await claimTask(taskId, reward);
+                if (success) {
+                    button.disabled = true;
+                    button.innerHTML = "&#10003;"; // Checked sign
+                    showCustomAlert('Reward claimed successfully!');
+                } else {
+                    showCustomAlert('Failed to claim reward. Please try again.');
+                }
+            });
+        } else {
+            button.disabled = true;
+        }
+    }
+
+    // Function to handle social media tasks
+    function handleSocialMediaTask(taskId, url) {
+        const button = document.getElementById(taskId);
+        button.addEventListener('click', (event) => {
+            if (button.textContent === "Claim") {
+                claimSocialMediaTask(taskId);
+            } else {
+                localStorage.setItem(taskId + '-initiated', 'true');
+                window.open(url, '_blank');
+            }
+        });
+    }
+
+    // Function to claim social media task
+    async function claimSocialMediaTask(taskId) {
+        const button = document.getElementById(taskId);
+        const success = await claimTask(taskId, 30000); // Assuming reward is 30000 for both tasks
+        if (success) {
+            button.disabled = true;
+            button.innerHTML = "&#10003;"; // Checked sign
+            showCustomAlert('Reward claimed successfully!');
+            localStorage.removeItem(taskId + '-initiated');
+        } else {
+            showCustomAlert('Failed to claim reward. Please try again.');
+        }
+    }
+
+    // Check if social media tasks were initiated and enable claim if true
+    async function checkSocialMediaTask(taskId) {
+        const button = document.getElementById(taskId);
+        if (localStorage.getItem(taskId + '-initiated') === 'true' && !(await fetchTaskStatus(taskId))) {
+            button.disabled = false;
+            button.textContent = "Claim";
+            button.addEventListener('click', async () => {
+                await claimSocialMediaTask(taskId);
+            });
+        }
+    }
+
+    // Function to show the custom alert
+    function showCustomAlert(message) {
+        const customAlert = document.getElementById('custom-alert');
+        const customAlertMessage = document.getElementById('custom-alert-message');
+        customAlertMessage.textContent = message;
+        customAlert.style.display = 'block';
+    }
+
+    // Function to close the custom alert
+    window.closeCustomAlert = function() {
+        const customAlert = document.getElementById('custom-alert');
+        customAlert.style.display = 'none';
+    }
+
+    // Update all task buttons
+    for (const [taskId, { target, reward }] of Object.entries(taskButtons)) {
+        const fetchProgress = taskId.startsWith('refer') ? fetchReferralCount : fetchMiningSessionCount;
+        if (taskId === 'follow-btn' || taskId === 'join-btn') {
+            const url = taskId === 'follow-btn' ? 'https://twitter.com/softcoin__' : 'https://t.me/softcoinupdates';
+            handleSocialMediaTask(taskId, url);
+            checkSocialMediaTask(taskId);
+        } else {
+            updateTaskButton(taskId, target, reward, fetchProgress);
+        }
+    }
 });
-    

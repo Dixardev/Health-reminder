@@ -20,7 +20,6 @@
         }
 
         #tasks-container {
-            
             width: 90%;
             max-width: 600px;
             margin: 20px 0;
@@ -28,14 +27,15 @@
             padding-top: 5px;
             border-radius: 8px;
         }
+
         body.dark-mode .tasks {
-            
             color: #e0e0e0;
         }
+
         h1 {
             text-align: center;
             color: #2C3A4D;
-            font-size: 1.5em;
+            font-size: 1.2em;
         }
 
         h1, h2 {
@@ -47,7 +47,6 @@
         .task {
             margin: 10px 0;
             padding: 10px;
-            
             border: 1px solid #ddd;
             border-radius: 4px;
             display: flex;
@@ -80,22 +79,23 @@
         button:hover:not(:disabled) {
             background: #268403;
         }
+
         #daily-check-in {
             background: #70fbdc;
         }
+
         body.dark-mode #daily-check-in {
             color: #2C3A4D;
+        }
+
+        body.dark-mode h1 {
+            color: #fff;
         }
     </style>
 </head>
 <body>
-    <!-- Other body elements -->
     <div id="tasks-container">
         <h1><b>Tasks</b></h1>
-        <div id="daily-check-in" class="task">
-            <span>Daily Check-In</span>
-            <button id="daily-check-in-btn">Claim</button>
-        </div>
         <div class="task">
             <span>Follow Softcoin on X</span>
             <span class="reward">30,000 SFT</span>
@@ -141,7 +141,7 @@
         <script src="cherry.js"></script>
         <script src="navigation.js" defer></script>
         <script src="dark-mode.js"></script>
-        <script src="tasks.js"></script>
+        <script src="tasks.js" defer></script>
     </div>
 </body>
 </html>

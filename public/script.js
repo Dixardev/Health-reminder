@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     let coinBalance = 0;
     let currentLevel = 1;
+    let miningSessionCount = 0; // Initialize the mining session count
     const rewardIntervals = [2 * 60 * 60 * 1000, 3 * 60 * 60 * 1000, 4 * 60 * 60 * 1000, 5 * 60 * 60 * 1000, 6 * 60 * 60 * 1000];
     const rewards = [15000, 30000, 60000, 120000, 240000];
     let timerInterval;
@@ -13,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusMessageEl = document.getElementById('status-message');
     const timerEl = document.getElementById('timer');
     const miningLevelEl = document.getElementById('mining-level');
+    const miningSessionCountEl = document.getElementById('mining-session-count'); // Element to display session count
     const bars = document.querySelectorAll('.bar');
 
     // Function to start mining
@@ -31,8 +33,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateStatusMessage("Mining in progress...");
                 coinBalance = data.coinBalance;
                 currentLevel = data.level;
+                miningSessionCount = data.miningSessionCount;
                 updateCoinBalance();
                 updateMiningLevel();
+                updateMiningSessionCount();
             } else {
                 updateStatusMessage(data.message || "Error starting mining");
             }
@@ -49,6 +53,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Function to update the mining level on the UI
     function updateMiningLevel() {
         miningLevelEl.textContent = currentLevel;
+    }
+
+    // Function to update the mining session count on the UI
+    function updateMiningSessionCount() {
+        miningSessionCountEl.textContent = `Sessions Completed: ${miningSessionCount}`;
     }
 
     // Function to update the status message on the UI
@@ -68,7 +77,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateStatusMessage("Mining complete!");
                 toggleBarsAnimation(false);
                 mineBtn.disabled = false;
+
+                // Update balance with the reward amount
+                coinBalance += rewards[level - 1];
+                updateCoinBalance();
                 updateCoinBalanceWithReferralEarnings(); // Update balance with referral earnings after mining complete
+                miningSessionCount += 1; // Increment session count
+                updateMiningSessionCount(); // Update session count on UI
             } else {
                 const hours = Math.floor((remainingTime / (1000 * 60 * 60)) % 24);
                 const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
@@ -98,16 +113,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 startTimer(data.miningStartTime, data.level);
                 coinBalance = data.coinBalance;
                 currentLevel = data.level;
+                miningSessionCount = data.miningSessionCount;
                 updateCoinBalance();
                 updateMiningLevel();
+                updateMiningSessionCount();
                 mineBtn.disabled = true;
                 toggleBarsAnimation(true);
                 updateStatusMessage("Mining in progress...");
             } else if (data.miningComplete) {
                 coinBalance = data.coinBalance;
                 currentLevel = data.level;
+                miningSessionCount = data.miningSessionCount;
                 updateCoinBalance();
                 updateMiningLevel();
+                updateMiningSessionCount();
                 updateStatusMessage("Mining complete!");
                 mineBtn.disabled = false;
                 toggleBarsAnimation(false);

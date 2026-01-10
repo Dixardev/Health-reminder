@@ -11,10 +11,10 @@ const userSchema = new mongoose.Schema({
     referralUsername: { type: String, default: '' },
     referrals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    completedTasks: [{ type: Number }],
-    lastCheckInDate: { type: Date },
+    level: { type: Number, default: 1 },
     miningSessionCount: { type: Number, default: 0 },
-    level: { type: Number, default: 1 } // Add this field
+    referralCount: { type: Number, default: 0 },
+    claimedTasks: { type: [String], default: [] } // Add this line
 });
 
 const User = mongoose.model('User', userSchema);
